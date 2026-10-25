@@ -2592,10 +2592,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
 
   // Salida común: volumen moderado, filtro suave y un eco corto (sonido más limpio y menos agresivo)
   let ruletaOut = null, ruletaEco = null;
+  // El sonido de la ruleta es solo para el organizador y la pantalla/TV. A los jugadores nunca se les abre audio
+  // (en iPhone eso hacía aparecer un reproductor en la pantalla bloqueada).
+  const audioPermitido = () => M.admin || document.body.classList.contains("display");
+  let audioIdle = 0;
   function audioCtx(){
     try {
-      // iPhone: que el sonido salga aunque el celular esté en silencio
-      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch(e){}
+      if (!audioPermitido()) return null;
+      // Sonidos cortos: no se anuncia como reproducción de música en el celular
+      try { if (navigator.audioSession) navigator.audioSession.type = "transient"; } catch(e){}
       if (!ruletaAudio){
         const a = ruletaAudio = new (window.AudioContext || window.webkitAudioContext)();
         const comp = a.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 3;
@@ -2609,12 +2614,14 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       if (!sonidoOn()) return null;
       if (ruletaOut) ruletaOut.gain.value = 0.85;
       if (ruletaAudio.state !== "running") ruletaAudio.resume().catch(() => {});
+      // Si no suena nada por unos segundos, el audio se suspende (nada queda "reproduciendo")
+      clearTimeout(audioIdle); audioIdle = setTimeout(() => { try { if (!spinning && ruletaAudio && ruletaAudio.state === "running") ruletaAudio.suspend(); } catch(e){} }, 8000);
       return ruletaAudio;
     } catch(e){ return null; }
   }
   // El navegador solo deja sonar después de un toque o clic en la página: se habilita con el primero que ocurra
   // (así suena también en la pantalla/TV aunque el giro se lance desde otro equipo)
-  ["pointerdown", "keydown", "touchend"].forEach(ev => document.addEventListener(ev, () => { if (sonidoOn()) audioCtx(); }, {passive:true}));
+  ["pointerdown", "keydown", "touchend"].forEach(ev => document.addEventListener(ev, () => { if (view === "sorteo" && audioPermitido()) audioCtx(); }, {passive:true}));
   let ultimoTick = 0, ruido = null;
   // Tic de la ruleta: un "toc" suave de madera (seno corto + un poco de ruido filtrado), más grave cuando frena
   function ruletaTick(lento){
@@ -3454,7 +3461,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   let audio;
   function beep(times){
     try {
+      if (!M.admin) return;
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state !== "running") audio.resume().catch(() => {});
+      setTimeout(() => { try { audio.suspend(); } catch(e){} }, 400 * times + 1500);
       for (let i = 0; i < times; i++){
         const o = audio.createOscillator(), g = audio.createGain();
         o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
