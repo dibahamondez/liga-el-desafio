@@ -477,6 +477,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     contactos:     {key:"id",      shape:"data"},   // correos de jugadores: solo organizadores
     sanciones:     {key:"id",      shape:"data", scoped:true},   // warnings y restas que pone el juez
     perfil_publico:{key:"user_id", shape:"data"},                 // apodo y foto de perfil (los ve todos)
+    jueces:        {key:"user_id", shape:"fila"},                 // quiénes son jueces (para el marco en su foto)
     vinculos:      {key:"user_id", shape:"cols", scoped:true}
   };
   T.votos.scoped = true; T.inscripciones.scoped = true;
@@ -486,6 +487,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     : {[T[t].key]:id, data:obj}, T[t].scoped ? {liga: LIGA_ID} : {});
   const fromRow = (t, row) => {
     if (T[t].shape === "cols"){ const o = {pid:row.pid}; if (row.deck != null) o.deck = row.deck; return o; }
+    if (T[t].shape === "fila") return {si:true};
     return row.data;
   };
   const watch = {}; // tabla → {rows:Map, subs:[], timer, ids:Set|null}

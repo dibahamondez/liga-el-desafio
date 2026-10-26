@@ -445,6 +445,24 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* Marco de juez alrededor de la foto */
+.avw{position:relative;display:inline-block;vertical-align:-6px;margin-right:6px}
+.avw .av{margin-right:0}
+.avw.juez .av,.avw.juez .dp-av{border:2px solid #6ebeff;box-shadow:0 0 0 2px rgba(110,190,255,.25)}
+.av-ini{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--bg);font-size:9px;font-weight:700;color:var(--muted);font-style:normal}
+.av-badge{position:absolute;right:-5px;bottom:-4px;width:13px;height:13px;border-radius:50%;background:#1d4f7a;color:#fff;font-size:8px;line-height:13px;text-align:center;border:1px solid #6ebeff}
+.dp-w{margin-right:0}.dp-w .av-badge{width:20px;height:20px;font-size:12px;line-height:20px;right:-4px;bottom:-2px}
+.dp-rol{margin-left:auto;align-self:flex-start;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.dp-rol.org{background:rgba(233,180,76,.15);color:var(--gold);border:1px solid rgba(233,180,76,.5)}
+.dp-rol.juez{background:rgba(110,190,255,.12);color:#9fd8ff;border:1px solid rgba(110,190,255,.5)}
+/* Menú del organizador: estética propia (dorado) para distinguirlo del de los jugadores */
+body.is-admin .drawer{background:linear-gradient(180deg,rgba(233,180,76,.10),transparent 220px),var(--surface);border-left:2px solid var(--gold)}
+body.is-admin .drawer-h b::after{content:" · Organizador";color:var(--gold);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+body.is-admin .drawer-perfil{border-color:rgba(233,180,76,.55);background:linear-gradient(135deg,rgba(233,180,76,.12),var(--surface-2))}
+body.is-admin .drawer .tab[aria-current="page"]{border-color:var(--gold);background:rgba(233,180,76,.16)}
+body.is-admin .drawer-sec .lbl{color:var(--gold)}
+body.is-admin .burger{border-color:rgba(233,180,76,.6)}
+body.is-admin .burger span{background:var(--gold)}
 /* Menú lateral: tarjeta de la cuenta arriba */
 .drawer-perfil{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer;font:inherit}
 .drawer-perfil:hover{border-color:var(--muted)}
@@ -1201,6 +1219,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   const ADMUI = () => M.admin && !PORTAL;
   let sanc = {};   // sanciones del juez (tabla "sanciones")
   let pub = {};    // perfil público de cada cuenta: {apodo, avatar, nombre} (tabla "perfil_publico")
+  let juecesIds = new Set();   // cuentas con rol de juez (tabla "jueces")
+  const uidDe = pid => { if (!pid) return null; for (const u in links) if (links[u] === pid) return u; return null; };
   // Perfil público de un jugador: por su cuenta vinculada o, en el historial, por su nombre
   function pubDe(pid, nombre){
     if (pid) for (const u in links) if (links[u] === pid && pub[u]) return pub[u];
@@ -1214,7 +1234,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   // Apodo bajo el nombre, entre comillas y casi sin destacar; foto chica antes del nombre
   const apodoHTML = (pid, nombre) => { const v = pubDe(pid, nombre); return v && v.apodo ? `<span class="apodo">“${esc(v.apodo)}”</span>` : ""; };
-  const avatarHTML = (pid, nombre) => { const v = pubDe(pid, nombre); return v && v.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(v.avatar) ? `<img class="av" src="${v.avatar}" alt="" loading="lazy">` : ""; };
+  // Juez: marco propio alrededor de la foto (si no tiene foto, sus iniciales con el marco)
+  const esJuezPid = (pid, nombre) => { let u = uidDe(pid); if (!u && nombre){ const k = claveNombre(canon(nombre)); const pl = S && S.players.find(x => claveNombre(canon(x.name)) === k); u = pl ? uidDe(pl.id) : null; } return !!(u && juecesIds.has(u)); };
+  const iniciales = n => String(n || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
+  const avatarHTML = (pid, nombre) => {
+    const v = pubDe(pid, nombre), foto = v && v.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(v.avatar), juez = esJuezPid(pid, nombre);
+    if (!foto && !juez) return "";
+    const img = foto ? `<img class="av" src="${v.avatar}" alt="" loading="lazy">` : `<span class="av av-ini">${esc(iniciales(nombre || pname(pid)))}</span>`;
+    return juez ? `<span class="avw juez" title="Juez de la liga">${img}<span class="av-badge" aria-hidden="true">⚖</span></span>` : img;
+  };
   let S = null, links = {}, linkData = {}, votes = {}, regs = {}, names = {}, focus = null, editDeck = null, editReg = null;
   const alerts = {}, applying = {}, drafts = {}, openEd = {};
 
@@ -3625,8 +3653,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const nombre = ((pf.nombre || "") + " " + (pf.apellido || "")).trim() || (M.email || "").split("@")[0];
     const ini = ((pf.nombre || nombre || "?")[0] + ((pf.apellido || "")[0] || "")).toUpperCase();
     const apodo = pb.apodo || pf.apodo || "";
-    const k = [nombre, apodo, pb.avatar ? pb.avatar.length : 0].join("|"); if (b.dataset.k === k) return; b.dataset.k = k;
-    b.innerHTML = `${pb.avatar ? `<img class="dp-av" src="${pb.avatar}" alt="">` : `<span class="dp-av dp-ini">${esc(ini)}</span>`}<span class="dp-txt"><b>${esc(nombre)}</b>${apodo ? `<span class="apodo">“${esc(apodo)}”</span>` : ""}<small>Ver mi perfil</small></span>`;
+    const k = [nombre, apodo, pb.avatar ? pb.avatar.length : 0, M.admin, M.juez].join("|"); if (b.dataset.k === k) return; b.dataset.k = k;
+    const rol = M.admin ? "Organizador" : M.juez ? "Juez" : "";
+    const av = pb.avatar ? `<img class="dp-av" src="${pb.avatar}" alt="">` : `<span class="dp-av dp-ini">${esc(ini)}</span>`;
+    b.innerHTML = `${M.juez && !M.admin ? `<span class="avw juez dp-w" title="Juez de la liga">${av}<span class="av-badge" aria-hidden="true">⚖</span></span>` : av}<span class="dp-txt"><b>${esc(nombre)}</b>${apodo ? `<span class="apodo">“${esc(apodo)}”</span>` : ""}<small>Ver mi perfil</small></span>${rol ? `<span class="dp-rol ${M.admin ? "org" : "juez"}">${rol}</span>` : ""}`;
   }
   document.addEventListener("click", e => {
     if (!e.target.closest("#drawerPerfil") || !window.Auth) return;
@@ -4741,6 +4771,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       db.collection("inscripciones").onSnapshot(q => { regs = {}; q.docs.forEach(d => { const v = d.data(); if (v) regs[d.id] = v; }); if (ready) render(); }, () => {});
       if (c.admin) db.collection("contactos").onSnapshot(q => { contactos = {}; q.docs.forEach(d => { const v = d.data(); if (v) contactos[d.id] = v; }); if (ready){ render(); if (view === "stats") renderStats(); } }, () => {});
       db.collection("votos").onSnapshot(q => { votes = {}; q.docs.forEach(d => { const v = d.data(); if (v) votes[d.id] = v; }); if (ready){ render(); autoApply(); } }, () => {});
+      db.collection("jueces").onSnapshot(q => { juecesIds = new Set(q.docs.map(d => d.id)); if (ready){ render(); if (view === "stats") renderStats(); } }, () => {});
       db.collection("perfil_publico").onSnapshot(q => { pub = {}; q.docs.forEach(d => { const v = d.data(); if (v) pub[d.id] = v; }); if (ready){ render(); if (view === "stats") renderStats(); } }, () => {});
       db.collection("sanciones").onSnapshot(q => { sanc = {}; q.docs.forEach(d => { const v = d.data(); if (v) sanc[d.id] = v; }); if (ready){ render(); syncJuez(); } }, () => {});
     } catch(e){ fail(e); }
