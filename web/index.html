@@ -445,6 +445,16 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* Menú lateral: tarjeta de la cuenta arriba */
+.drawer-perfil{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer;font:inherit}
+.drawer-perfil:hover{border-color:var(--muted)}
+.drawer-perfil[hidden]{display:none}
+.dp-av{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--line)}
+.dp-ini{display:grid;place-items:center;background:var(--bg);font-family:var(--f-display);font-weight:900;font-size:18px;color:var(--muted)}
+.dp-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.dp-txt b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-txt small{font-size:12px;color:var(--muted);margin-top:2px}
+#menuActions #btnAccount{display:none!important}
 /* Apodo: debajo del nombre, entre comillas, casi como un susurro */
 .apodo{display:block;font-size:11px;font-weight:400;font-style:italic;color:var(--muted);opacity:.6;letter-spacing:.01em;line-height:1.2;margin-top:1px;text-transform:none}
 tr.t4 td.nm .apodo{color:var(--muted);font-weight:400}
@@ -891,9 +901,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
 <div class="drawer-back" id="menuBack" hidden></div>
 <aside class="drawer" id="menuDrawer" aria-label="Menú" hidden>
   <div class="drawer-h"><b>Menú</b><button class="acc-x" id="btnMenuClose" type="button" aria-label="Cerrar menú">×</button></div>
+  <button type="button" class="drawer-perfil" id="drawerPerfil" hidden></button>
   <div class="drawer-sec" hidden><span class="lbl">Liga</span><div id="ligaLinks"></div></div>
   <div class="drawer-sec"><span class="lbl">Secciones</span><div id="menuTabs"></div></div>
-  <div class="drawer-sec"><span class="lbl">Cuenta y vistas</span><div id="menuActions"></div></div>
+  <div class="drawer-sec"><span class="lbl">Más</span><div id="menuActions"></div></div>
 </aside>
 <div class="tv-bar"><button class="btn ghost" id="btnTvSorteo" type="button">Sorteo</button><button class="btn ghost tv-exit" id="btnTvExit" type="button">Salir de modo pantalla</button></div>
 <div class="wrap">
@@ -3604,8 +3615,34 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   function setTxt(el, t){ if (el && el.textContent !== t) el.textContent = t; }
 
   /* ---------- Render ---------- */
+  // Menú lateral: arriba, la tarjeta de la cuenta (foto o iniciales, nombre y apodo); abre "Mi perfil"
+  function pintarPerfilMenu(){
+    const b = $("drawerPerfil"); if (!b) return;
+    if (M.mode !== "live" || !window.Auth){ b.hidden = true; return; }
+    b.hidden = false;
+    if (!M.uid){ b.innerHTML = `<span class="dp-av dp-ini">?</span><span class="dp-txt"><b>${PORTAL ? "Entrar o crear cuenta" : "Entrar como organizador"}</b><small>Para inscribirte, ver tu mesa y reportar</small></span>`; b.dataset.k = ""; return; }
+    const pf = M.perfil || {}, pb = pub[M.uid] || {};
+    const nombre = ((pf.nombre || "") + " " + (pf.apellido || "")).trim() || (M.email || "").split("@")[0];
+    const ini = ((pf.nombre || nombre || "?")[0] + ((pf.apellido || "")[0] || "")).toUpperCase();
+    const apodo = pb.apodo || pf.apodo || "";
+    const k = [nombre, apodo, pb.avatar ? pb.avatar.length : 0].join("|"); if (b.dataset.k === k) return; b.dataset.k = k;
+    b.innerHTML = `${pb.avatar ? `<img class="dp-av" src="${pb.avatar}" alt="">` : `<span class="dp-av dp-ini">${esc(ini)}</span>`}<span class="dp-txt"><b>${esc(nombre)}</b>${apodo ? `<span class="apodo">“${esc(apodo)}”</span>` : ""}<small>Ver mi perfil</small></span>`;
+  }
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#drawerPerfil") || !window.Auth) return;
+    const cerrar = $("btnMenuClose"); if (cerrar) cerrar.click();
+    if (!M.uid) return window.Auth.open("login");
+    const pf = M.perfil || {}, pb = pub[M.uid] || {};
+    window.Auth.cuenta({first:pf.nombre || "", last:pf.apellido || "", nick:pb.apodo || pf.apodo || "", avatar:pb.avatar || null});
+  });
+  window.addEventListener("perfil-actualizado", e => {
+    const d = e.detail || {}; M.perfil = Object.assign({}, M.perfil || {}, {nombre:d.first, apellido:d.last, apodo:d.nick || null});
+    if (M.uid){ pub[M.uid] = Object.assign({}, pub[M.uid] || {}, {apodo:d.nick || undefined, avatar:d.avatar || undefined, nombre:((d.first || "") + " " + (d.last || "")).trim()}); }
+    pintarPerfilMenu(); render();
+  });
   function render(){
     try { aliasHist(); } catch(e){}
+    try { pintarPerfilMenu(); } catch(e){}
     devUI(); try { pintarDias(); } catch(e){} try { autoHistSalon(); } catch(e){}
     document.body.classList.toggle("is-admin", ADMUI());
     document.body.classList.toggle("portal", PORTAL);

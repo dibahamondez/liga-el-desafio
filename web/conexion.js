@@ -171,11 +171,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
         </div>
         <div class="field"><label for="aNick">Apodo (opcional)</label><input id="aNick" type="text" autocomplete="nickname" maxlength="${R.apodoMax}" value="${esc(c.nick || "")}"><p class="hint">Sale debajo de tu nombre, entre comillas.</p></div>
         <div class="field"><label for="aEmail">Correo</label><input id="aEmail" type="email" autocomplete="email" inputmode="email" value="${esc(c.email || "")}" required>${c.google ? '<p class="hint">Entras con Google: si cambias el correo aquí, para entrar con el nuevo tendrás que usar contraseña.</p>' : '<p class="hint">Si lo cambias, te llegará un correo para confirmar.</p>'}</div>
-        <details class="acc-pass"${c.abrirPass ? " open" : ""}><summary>Cambiar contraseña</summary>
-          ${passField("aPass", "Contraseña nueva", "new-password")}
-          ${passField("aPass2", "Repite la contraseña", "new-password")}
-          <p class="hint">Mínimo ${R.passMin} caracteres, con al menos una letra y un número. Déjalas vacías si no quieres cambiarla.</p>
-        </details>
+        <div class="acc-pass"><button type="button" class="lnk" data-recuperar>¿Olvidaste tu contraseña o quieres cambiarla?</button><p class="hint">Te enviamos un código a tu correo para crear una nueva.</p></div>
         <span class="err" id="aErr"></span><span class="ok" id="aOk"></span>
         <button class="btn primary" type="submit">Guardar cambios</button>
       </form>
@@ -196,7 +192,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       back = document.createElement("div"); back.className = "acc-back";
       back.addEventListener("click", onClick); back.addEventListener("submit", onSubmit);
       back.addEventListener("change", e => { if (e.target.id === "aFoto" && e.target.files && e.target.files[0]) fotoChica(e.target.files[0]); });
-      back.addEventListener("input", e => { if (e.target.id === "aCode") e.target.value = e.target.value.replace(/\D/g, "").slice(0, R.codigoLargo); });
+      back.addEventListener("input", e => { if (e.target.closest && e.target.closest("#fCuenta")) ctx.ctaTocado = true; if (e.target.id === "aCode") e.target.value = e.target.value.replace(/\D/g, "").slice(0, R.codigoLargo); });
       document.addEventListener("keydown", e => { if (e.key === "Escape" && back && !back.hidden && !VIEWS[view]().noClose && Auth.closable) close(); });
       document.body.appendChild(back);
     }
@@ -329,7 +325,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     if (f.id === "fCuenta"){
       const c = ctx.cta || {};
       const first = clean($a("aFirst").value), last = clean($a("aLast").value), nick = clean($a("aNick").value);
-      const email = clean($a("aEmail").value).toLowerCase(), p1 = $a("aPass").value, p2 = $a("aPass2").value;
+      const email = clean($a("aEmail").value).toLowerCase(), p1 = "", p2 = "";
       const err = nameErr(first, "nombre") || nameErr(last, "apellido") ||
         (nick && (nick.length < R.apodoMin || nick.length > R.apodoMax) ? `El apodo debe tener entre ${R.apodoMin} y ${R.apodoMax} caracteres.` : "") ||
         (!EMAIL_RE.test(email) ? "Escribe un correo válido." : "") ||
@@ -356,7 +352,6 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       busy(f, false);
       Object.assign(c, {first, last, nick, email: email !== c.email && avisos.length ? c.email : email});
       const ok = $a("aOk"); if (ok) ok.textContent = ["Cambios guardados."].concat(avisos).join(" ");
-      $a("aPass").value = ""; $a("aPass2").value = "";
       try { window.dispatchEvent(new CustomEvent("perfil-actualizado", {detail:{first, last, nick, avatar:c.avatar || null}})); } catch(e){}
       return;
     }
@@ -381,7 +376,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       cv.getContext("2d").drawImage(img, sx, sy, lado, lado, 0, 0, N, N);
       URL.revokeObjectURL(url);
       const vals = {first:$a("aFirst").value, last:$a("aLast").value, nick:$a("aNick").value, email:$a("aEmail").value};
-      ctx.cta = Object.assign(ctx.cta || {}, {first:vals.first, last:vals.last, nick:vals.nick, avatar:cv.toDataURL("image/jpeg", 0.82)});
+      ctx.cta = Object.assign(ctx.cta || {}, {first:vals.first, last:vals.last, nick:vals.nick, avatar:cv.toDataURL("image/jpeg", 0.82)}); ctx.ctaTocado = true;
       const em = ctx.cta.email; show("cuenta"); $a("aEmail").value = vals.email || em || "";
       const ok = $a("aOk"); if (ok) ok.textContent = "Foto lista. Toca “Guardar cambios”.";
     };
@@ -390,6 +385,14 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   }
   async function onClick(e){
     const t = e.target;
+    if (t.closest("[data-recuperar]")){
+      const b = t.closest("[data-recuperar]"), email = ((ctx.cta && ctx.cta.email) || "").toLowerCase();
+      if (!EMAIL_RE.test(email)) return setErr("Tu cuenta no tiene un correo válido.");
+      b.disabled = true; b.textContent = "Enviando código…";
+      const {error} = await sb.auth.resetPasswordForEmail(email);
+      if (error){ b.disabled = false; b.textContent = "¿Olvidaste tu contraseña o quieres cambiarla?"; return setErr(friendly(error)); }
+      return toCode("recovery", email);
+    }
     if (t.closest("[data-foto-del]")){ const v = {first:$a("aFirst").value, last:$a("aLast").value, nick:$a("aNick").value}; ctx.cta = Object.assign(ctx.cta || {}, v, {avatar:null}); show("cuenta"); const ok = $a("aOk"); if (ok) ok.textContent = "Foto quitada. Toca “Guardar cambios”."; return; }
     if (t === back && Auth.closable && !VIEWS[view]().noClose) return close();
     if (t.closest("[data-close]")) return close();
@@ -439,15 +442,24 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     },
     close,
     // "Mi perfil": carga los datos actuales y abre el formulario
-    async cuenta(){
+    async cuenta(pre){
       if (!sb) return;
-      const {data:{user}} = await sb.auth.getUser(); if (!user) return show("login");
+      // Se abre al instante con los datos que ya tiene la página (y la sesión guardada en el equipo)
+      const {data:{session}} = await sb.auth.getSession(); const su = session && session.user;
+      if (!su) return show("login");
+      const provs = (su.app_metadata && su.app_metadata.providers) || [su.app_metadata && su.app_metadata.provider];
+      ctx.cta = Object.assign({email:(su.email || "").toLowerCase(), google:(provs || []).includes("google") && !(provs || []).includes("email")}, pre || {});
+      ctx.ctaTocado = false;
+      show("cuenta");
+      const user = su;
       const [p, pb] = await Promise.all([
         sb.from("perfiles").select("nombre,apellido,apodo").eq("id", user.id).maybeSingle(),
         sb.from("perfil_publico").select("data").eq("user_id", user.id).maybeSingle()
       ]);
       const pr = (p && p.data) || {}, pu = (pb && pb.data && pb.data.data) || {};
       const prov = (user.app_metadata && user.app_metadata.providers) || [user.app_metadata && user.app_metadata.provider];
+      // Si la persona todavía no tocó nada, se refresca con lo guardado en el servidor
+      if (view !== "cuenta" || ctx.ctaTocado || !back || back.hidden) return;
       ctx.cta = {first:pr.nombre || "", last:pr.apellido || "", nick:pu.apodo || pr.apodo || "", email:(user.email || "").toLowerCase(), avatar:pu.avatar || null, google:(prov || []).includes("google") && !(prov || []).includes("email")};
       show("cuenta");
     },
