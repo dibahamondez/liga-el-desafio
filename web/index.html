@@ -445,6 +445,17 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* Companion: QR del evento en el modo pantalla */
+.tv-comp{display:none}
+body.display .tv-comp:not([hidden]){display:flex;flex-direction:column;align-items:center;gap:8px;position:fixed;right:22px;bottom:22px;z-index:20;background:var(--surface);border:2px solid var(--gold);border-radius:18px;padding:16px 18px;box-shadow:0 18px 50px rgba(0,0,0,.6);max-width:300px;text-align:center}
+.tv-comp img{width:230px;height:230px;object-fit:contain;background:#fff;border-radius:10px;padding:6px;image-rendering:pixelated}
+.tc-t{font-family:var(--f-display);font-weight:900;font-size:18px;text-transform:uppercase;line-height:1.15}
+.tc-s{font-size:13px;color:var(--muted)}
+.tc-c{font-family:var(--f-num);font-size:30px;letter-spacing:.18em;color:var(--gold)}
+.comp-row{align-items:flex-end}
+.comp-qr{display:flex;gap:10px;align-items:center}
+.comp-qr img{width:96px;height:96px;object-fit:contain;background:#fff;border-radius:8px;padding:4px;image-rendering:pixelated}
+.comp-btns{display:flex;flex-direction:column;gap:6px}
 /* Marco de juez alrededor de la foto */
 .avw{position:relative;display:inline-block;vertical-align:-6px;margin-right:6px}
 .avw .av{margin-right:0}
@@ -968,6 +979,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   <div class="guia adm live-only" id="guia" hidden></div>
   <div class="banner adm live-only" id="sampleBanner" hidden>Jugadores de ejemplo. Carga los inscritos reales en el panel del organizador, al final de la página.</div>
 
+  <aside class="tv-comp" id="tvComp" hidden aria-label="Inscripción en Companion"></aside>
   <section class="clock live-only" aria-label="Tiempo de ronda">
     <div class="clock-head">
       <div class="rounds" id="pips"></div>
@@ -1136,6 +1148,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         </div>
         <p class="note">Rondas al azar: se evita repetir rivales y que se junten dos comandantes iguales en una mesa. Rondas suizas: mesas en orden de standing (puntos, kills y Buchholz); si alguien ya jugó con alguien de su mesa o tiene el mismo comandante, se cambia por el siguiente con exactamente los mismos puntos, kills y Buchholz, y al final se intercambian jugadores entre mesas con los mismos puntos si eso deja ambas mesas sin choques. Si los inscritos no son múltiplo de 4, se forman mesas de 3. Desempate: puntos, kills y Buchholz (suma de los puntos de los rivales enfrentados).</p>
       </div></details>
+      <details class="adm-sec" data-sec="comp"><summary><span><b>Companion (EventLink)</b><small>Código y QR del evento de esta fecha: se muestran en el modo pantalla</small></span></summary><div class="adm-sec-body" id="compBox"></div></details>
       <details class="adm-sec" data-sec="cal"><summary><span><b>Calendario de ligas</b><small>Qué días se juega cada mes y cuántas fechas suman al standing</small></span></summary><div class="adm-sec-body">
         <div class="cal-admin" id="calAdmin"></div>
       </div></details>
@@ -2394,6 +2407,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if ((v === "sorteo" || v === "warn") && !ADMUI() && M.mode === "connecting") vistaPendiente = v;
     if (v === "warn" && !ADMUI()) v = "live";
     if (v === "sorteo" && !ADMUI()) v = "live";   // el sorteo solo lo ven los organizadores
+    setTimeout(() => { try { renderCompanion(); } catch(e){} }, 0);
     view = v;
     document.body.classList.toggle("view-stats", v === "stats");
     document.body.classList.toggle("view-sorteo", v === "sorteo");
@@ -3670,8 +3684,51 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (M.uid){ pub[M.uid] = Object.assign({}, pub[M.uid] || {}, {apodo:d.nick || undefined, avatar:d.avatar || undefined, nombre:((d.first || "") + " " + (d.last || "")).trim()}); }
     pintarPerfilMenu(); render();
   });
+  // ---------- Companion (EventLink): código y QR del evento de la fecha ----------
+  // El QR lo genera EventLink al crear el evento: el organizador sube una captura y escribe el código.
+  const compDe = () => (S && S.eventlink) || {};
+  function renderCompanion(){
+    const c = compDe(), tv = $("tvComp");
+    if (tv){
+      const ver = document.body.classList.contains("display") && view !== "sorteo" && S && S.phase === "inscripcion" && (c.qr || c.codigo);
+      tv.hidden = !ver;
+      const k = (c.qr || "").length + "|" + (c.codigo || "");
+      if (ver && tv.dataset.k !== k){ tv.dataset.k = k;
+        tv.innerHTML = `<b class="tc-t">Inscríbete también en Companion</b>${c.qr ? `<img src="${c.qr}" alt="Código QR del evento en Magic Companion">` : ""}<span class="tc-s">Escanea con la cámara del celular${c.codigo ? " o ingresa el código" : ""}</span>${c.codigo ? `<span class="tc-c">${esc(c.codigo)}</span>` : ""}`; }
+    }
+    const box = $("compBox"); if (!box || typing(box)) return;
+    const k2 = (c.qr || "").length + "|" + (c.codigo || ""); if (box.dataset.k === k2 && box.innerHTML) return; box.dataset.k = k2;
+    box.innerHTML = `<p class="note" style="margin:0">Cuando crees el evento en EventLink, copia aquí su <b>código</b> y sube una captura de su <b>QR</b> (está en la página de inscripción o en la pestaña “mirror”). En el modo pantalla, mientras las inscripciones estén abiertas, aparece el QR para que la gente se inscriba en Companion. Cada fecha tiene su propio código.</p>
+      <div class="row comp-row"><div class="field"><label for="compCodigo">Código del evento</label><input id="compCodigo" type="text" maxlength="40" placeholder="Ej: 1A2B3C" value="${esc(c.codigo || "")}" autocomplete="off"></div>
+        <div class="comp-qr">${c.qr ? `<img src="${c.qr}" alt="QR del evento">` : '<span class="note">Sin QR</span>'}<span class="comp-btns"><label class="btn" for="compFile">${c.qr ? "Cambiar QR" : "Subir QR"}</label><input id="compFile" type="file" accept="image/*" hidden>${c.qr ? '<button type="button" class="btn ghost" data-comp-del>Quitar</button>' : ""}</span></div></div>
+      <div class="row"><button type="button" class="btn primary" data-comp-save>Guardar código</button><span class="note" id="compMsg"></span></div>`;
+  }
+  function guardarComp(cambios){
+    if (!M.admin || !S) return;
+    S.eventlink = Object.assign({}, compDe(), cambios);
+    if (!S.eventlink.qr && !S.eventlink.codigo) delete S.eventlink;
+    commit(); const b = $("compBox"); if (b) b.dataset.k = ""; renderCompanion();
+  }
+  document.addEventListener("click", e => {
+    if (e.target.closest("[data-comp-save]")){ guardarComp({codigo:($("compCodigo").value || "").trim()}); const m = $("compMsg"); if (m) m.textContent = "Guardado ✓"; return; }
+    if (e.target.closest("[data-comp-del]")) guardarComp({qr:null});
+  });
+  document.addEventListener("change", e => {
+    if (e.target.id !== "compFile" || !e.target.files || !e.target.files[0]) return;
+    // La captura se recorta a lo esencial: se achica a 420 px (el QR se sigue leyendo bien)
+    const f = e.target.files[0], img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const N = 420, r = Math.min(1, N / Math.max(img.width, img.height)), cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+      const g = cv.getContext("2d"); g.imageSmoothingEnabled = false; g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      guardarComp({qr: cv.toDataURL("image/png"), codigo: ($("compCodigo") && $("compCodigo").value || compDe().codigo || "").trim()});
+    };
+    img.src = url;
+  });
   function render(){
     try { aliasHist(); } catch(e){}
+    try { renderCompanion(); } catch(e){}
     try { pintarPerfilMenu(); } catch(e){}
     devUI(); try { pintarDias(); } catch(e){} try { autoHistSalon(); } catch(e){}
     document.body.classList.toggle("is-admin", ADMUI());
@@ -4708,6 +4765,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (on){ setView(view === "warn" ? "live" : view); tvLabel(); focus = null; ["tables"].forEach(id => $(id).scrollTop = 0); const ss = document.querySelector("#mainGrid .stand-scroll"); if (ss) ss.scrollTop = 0; $("tvMesas").textContent = ""; $("tvStand").textContent = ""; render(); }
     if (!on) setView(view);
     $("btnDisplay").textContent = on ? "Salir de modo pantalla" : "Modo pantalla";
+    try { renderCompanion(); } catch(e){}
     if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
     if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   });
