@@ -1121,8 +1121,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
 <script>
 (function(){
   "use strict";
-  // Liga activa: ?liga=b3 (Bracket 3, jueves) o ?liga=precon (sábados). Sin parámetro: lunes a jueves Bracket 3, viernes a domingo Precon.
-  const LIGA = (() => { const q = new URLSearchParams(location.search).get("liga"); if (q === "b3" || q === "precon") return q; const d = new Date().getDay(); return d >= 1 && d <= 4 ? "b3" : "precon"; })();
+  // Liga activa: ?liga=b3 (Bracket 3, jueves) o ?liga=precon (sábados). Sin parámetro: jueves Bracket 3, sábado Precon y los demás días una de las dos al azar.
+  const LIGA = (() => { const q = new URLSearchParams(location.search).get("liga"); if (q === "b3" || q === "precon") return q; const d = new Date().getDay(); return d === 4 ? "b3" : d === 6 ? "precon" : (Math.random() < 0.5 ? "b3" : "precon"); })();   // jueves B3, sábado Precon, otros días al azar
   const B3 = LIGA === "b3";
   // Liga de testeo (solo rol desarrollador): mismos datos que la liga real pero guardados aparte (sufijo _test)
   const TEST = new URLSearchParams(location.search).get("test") === "1";
