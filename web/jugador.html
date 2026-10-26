@@ -445,6 +445,10 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* Apodo: debajo del nombre, entre comillas, casi como un susurro */
+.apodo{display:block;font-size:11px;font-weight:400;font-style:italic;color:var(--muted);opacity:.6;letter-spacing:.01em;line-height:1.2;margin-top:1px;text-transform:none}
+tr.t4 td.nm .apodo{color:var(--muted);font-weight:400}
+.av{width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:-5px;margin-right:6px;border:1px solid var(--line)}
 .seat-warn,.jz-warn{display:inline-flex;align-items:center;gap:6px;margin-top:4px}
 .sw-add{opacity:.45;transition:opacity .15s,background .15s;border:1px solid rgba(233,180,76,.6);background:rgba(233,180,76,.1);color:var(--gold);border-radius:999px;padding:2px 10px;font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
 .sw-add:hover,.sw-add:focus-visible{opacity:1;background:rgba(233,180,76,.22)}
@@ -1185,6 +1189,21 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   const PORTAL = true;
   const ADMUI = () => M.admin && !PORTAL;
   let sanc = {};   // sanciones del juez (tabla "sanciones")
+  let pub = {};    // perfil público de cada cuenta: {apodo, avatar, nombre} (tabla "perfil_publico")
+  // Perfil público de un jugador: por su cuenta vinculada o, en el historial, por su nombre
+  function pubDe(pid, nombre){
+    if (pid) for (const u in links) if (links[u] === pid && pub[u]) return pub[u];
+    const k = claveNombre(canon(nombre || (pid ? pname(pid) : "")));
+    if (!k) return null;
+    for (const u in pub){ const v = pub[u]; if (v && v.nombre && claveNombre(canon(v.nombre)) === k) return v; }
+    if (pid) return null;
+    // Historial: el nombre del jugador en la fecha → su cuenta vinculada hoy
+    const pl = S && S.players.find(x => claveNombre(canon(x.name)) === k);
+    return pl ? pubDe(pl.id) : null;
+  }
+  // Apodo bajo el nombre, entre comillas y casi sin destacar; foto chica antes del nombre
+  const apodoHTML = (pid, nombre) => { const v = pubDe(pid, nombre); return v && v.apodo ? `<span class="apodo">“${esc(v.apodo)}”</span>` : ""; };
+  const avatarHTML = (pid, nombre) => { const v = pubDe(pid, nombre); return v && v.avatar && /^data:image\/(jpeg|png|webp);base64,/.test(v.avatar) ? `<img class="av" src="${v.avatar}" alt="" loading="lazy">` : ""; };
   let S = null, links = {}, linkData = {}, votes = {}, regs = {}, names = {}, focus = null, editDeck = null, editReg = null;
   const alerts = {}, applying = {}, drafts = {}, openEd = {};
 
@@ -1971,7 +1990,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         <div class="stand-scroll"><table><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th>Pts</th><th title="Puntos negativos: penalizaciones y warnings">Neg</th><th>Base</th><th>Bono</th><th>${B3 ? "Comandantes" : "Mazos"}</th><th>Fechas</th><th>V</th><th>K</th><th>PJ</th><th class="l">${B3 ? "Comandante más usado" : "Mazo más usado"}</th></tr></thead><tbody>${standVis.map((p, i) => {
           const top = Object.entries(p.decks).sort((a, b) => b[1] - a[1])[0];
           const pk = fold(p.nombre).trim();
-          return `<tr class="${i === 0 ? "top1" : i < 3 ? "top3" : ""}${i < 4 ? " t4" : ""}${STADM() && editPlayer === pk ? " sel" : ""}" ${STADM() ? `data-edit-player="${esc(pk)}" title="Editar estadísticas de ${esc(p.nombre)}" style="cursor:pointer"` : 'style="cursor:default"'}><td class="l pos">${medalla(i)}</td><td class="l nm">${esc(p.nombre)}${STADM() ? ' <span class="edit-hint">✎</span>' : ""}</td><td class="pts">${p.pts}</td><td>${p.neg ? `<span class="neg">−${p.neg}</span>` : "–"}</td><td>${p.base}</td><td>${p.bono ? `<span class="bono">+${p.bono}</span>` : "–"}</td><td title="${statMonth === "all" ? "Mazos distintos en todo el histórico" : "Mazos distintos jugados este mes"}">${statMonth === "all" ? p.distintos : `<span class="${p.distintos >= BONO_MAZOS ? "ok-t" : ""}">${Math.min(p.distintos, BONO_MAZOS)}/${BONO_MAZOS}</span>`}</td><td>${statMonth === "all" ? p.fechas : p.fechas + "/" + ((calOf(statMonth) && calOf(statMonth).fechas.length) || FECHAS_MES)}</td><td>${p.w}</td><td>${p.kills}</td><td>${p.pj}</td><td class="l${cmdDeKey(top && top[0]) ? " cmd-art" : ""}" style="color:var(--muted)">${artFondo(cmdDeKey(top && top[0]), top && DECK[top[0]] ? artMazo(top[0]) : "")}${top ? (DECK[top[0]] ? `<span class="deck-set">${setIcon(DECK[top[0]].set)}${esc(DECK[top[0]].name)}</span>` : `<span class="deck-set">${(c => c != null ? `<span class="ci">${ciPips(c)}</span>` : "")(ciFor(top[0].replace(/^c:/, "")))}${esc(top[0].replace(/^c:/, ""))}</span>`) : "–"}</td></tr>`; }).join("")}</tbody></table></div>${STADM() ? `<p class="note" style="margin:0">Organizador: toca a un jugador para corregir sus números. ${topN ? `Los jugadores ven solo el top ${topN}; tú los ves a todos (${stand.length}).` : "Los jugadores ven el standing completo."}</p>` : standVis.length < stand.length ? '<p class="note" style="margin:0">Se muestra el top ' + standVis.length + '. Tu posición y todos tus números están en “Mis estadísticas”.</p>' : ""}</div>
+          return `<tr class="${i === 0 ? "top1" : i < 3 ? "top3" : ""}${i < 4 ? " t4" : ""}${STADM() && editPlayer === pk ? " sel" : ""}" ${STADM() ? `data-edit-player="${esc(pk)}" title="Editar estadísticas de ${esc(p.nombre)}" style="cursor:pointer"` : 'style="cursor:default"'}><td class="l pos">${medalla(i)}</td><td class="l nm">${avatarHTML(null, p.nombre)}${esc(p.nombre)}${STADM() ? ' <span class="edit-hint">✎</span>' : ""}${apodoHTML(null, p.nombre)}</td><td class="pts">${p.pts}</td><td>${p.neg ? `<span class="neg">−${p.neg}</span>` : "–"}</td><td>${p.base}</td><td>${p.bono ? `<span class="bono">+${p.bono}</span>` : "–"}</td><td title="${statMonth === "all" ? "Mazos distintos en todo el histórico" : "Mazos distintos jugados este mes"}">${statMonth === "all" ? p.distintos : `<span class="${p.distintos >= BONO_MAZOS ? "ok-t" : ""}">${Math.min(p.distintos, BONO_MAZOS)}/${BONO_MAZOS}</span>`}</td><td>${statMonth === "all" ? p.fechas : p.fechas + "/" + ((calOf(statMonth) && calOf(statMonth).fechas.length) || FECHAS_MES)}</td><td>${p.w}</td><td>${p.kills}</td><td>${p.pj}</td><td class="l${cmdDeKey(top && top[0]) ? " cmd-art" : ""}" style="color:var(--muted)">${artFondo(cmdDeKey(top && top[0]), top && DECK[top[0]] ? artMazo(top[0]) : "")}${top ? (DECK[top[0]] ? `<span class="deck-set">${setIcon(DECK[top[0]].set)}${esc(DECK[top[0]].name)}</span>` : `<span class="deck-set">${(c => c != null ? `<span class="ci">${ciPips(c)}</span>` : "")(ciFor(top[0].replace(/^c:/, "")))}${esc(top[0].replace(/^c:/, ""))}</span>`) : "–"}</td></tr>`; }).join("")}</tbody></table></div>${STADM() ? `<p class="note" style="margin:0">Organizador: toca a un jugador para corregir sus números. ${topN ? `Los jugadores ven solo el top ${topN}; tú los ves a todos (${stand.length}).` : "Los jugadores ven el standing completo."}</p>` : standVis.length < stand.length ? '<p class="note" style="margin:0">Se muestra el top ' + standVis.length + '. Tu posición y todos tus números están en “Mis estadísticas”.</p>' : ""}</div>
       ${STADM() && editPlayer ? editStatsHTML(evsAll, statMonth) : ""}
       <div class="stats-grid">
         <div class="card"><div class="sec-head" style="margin:0"><h3>Jugadores con más kills</h3>${seg}</div><p class="card-sub" style="margin:0"><b>${killsTot}</b> kills en total ${rankScope === "all" ? "en el histórico" : "en el " + (statMonth === "all" ? "período" : "mes")}</p>${bars(playerKills)}</div>
@@ -3657,7 +3676,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
           right = `<span class="pt">${det ? det + " · " : ""}+${points(r, id, c)}</span>`;
         }
         const mv = ADMUI() && !r && !pasada && !document.body.classList.contains("display");
-        return `<li class="seat ${cls}${id === myPid ? " me" : ""}${moveSel === id ? " picked" : ""}${isDrop(id) ? " dropped" : ""}" data-pid="${id}"${mv ? ' draggable="true" title="Arrastra para mover a otra mesa (o toca para elegir y luego toca el destino)"' : ""}><span class="n">·</span><span class="nm-wrap"><span class="nm">${esc(pname(id))}</span>${JZ[id] ? `<span class="jz-badge" title="${esc(JZ[id].motivo || "")}">Juez: ${esc(sancTxt(JZ[id]))}</span>` : ""}${cmdLine(id)}${wEd ? `<span class="seat-warn"><button type="button" class="sw-add" data-swarn="${esc(id)}" data-d="1" title="Cada clic suma un warning (cada ${WARN_LIMIT} en la fecha restan ${WARN_PEN} punto)">Warning</button>${WO[id] ? `<b class="sw-n">${WO[id]}</b><button type="button" class="sw-rm" data-swarn="${esc(id)}" data-d="-1" aria-label="Quitar un warning a ${esc(pname(id))}" title="Quitar un warning">−</button>` : ""}</span>` : (WO[id] && (M.admin || M.juez) ? `<span class="sw-badge">${WO[id]} warning${WO[id] === 1 ? "" : "s"}</span>` : "")}</span>${right}</li>`;
+        return `<li class="seat ${cls}${id === myPid ? " me" : ""}${moveSel === id ? " picked" : ""}${isDrop(id) ? " dropped" : ""}" data-pid="${id}"${mv ? ' draggable="true" title="Arrastra para mover a otra mesa (o toca para elegir y luego toca el destino)"' : ""}><span class="n">·</span><span class="nm-wrap"><span class="nm">${avatarHTML(id)}${esc(pname(id))}</span>${apodoHTML(id)}${JZ[id] ? `<span class="jz-badge" title="${esc(JZ[id].motivo || "")}">Juez: ${esc(sancTxt(JZ[id]))}</span>` : ""}${cmdLine(id)}${wEd ? `<span class="seat-warn"><button type="button" class="sw-add" data-swarn="${esc(id)}" data-d="1" title="Cada clic suma un warning (cada ${WARN_LIMIT} en la fecha restan ${WARN_PEN} punto)">Warning</button>${WO[id] ? `<b class="sw-n">${WO[id]}</b><button type="button" class="sw-rm" data-swarn="${esc(id)}" data-d="-1" aria-label="Quitar un warning a ${esc(pname(id))}" title="Quitar un warning">−</button>` : ""}</span>` : (WO[id] && (M.admin || M.juez) ? `<span class="sw-badge">${WO[id]} warning${WO[id] === 1 ? "" : "s"}</span>` : "")}</span>${right}</li>`;
       }).join("");
       const jzIds = Object.keys(JZ);
       const jzNota = jzIds.length ? `<div class="juez-nota"><b>Sanción del juez</b>${jzIds.map(id => `<span>${esc(pname(id))}: ${esc(sancTxt(JZ[id]))}${JZ[id].motivo ? " · " + esc(JZ[id].motivo) : ""}</span>`).join("")}<small>${r ? "Ya descontado del standing." : "Se descuenta automáticamente al cerrar la mesa."}</small></div>` : "";
@@ -3679,7 +3698,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       $("moveHint").textContent = moveSel ? `Moviendo a ${pname(moveSel)}: toca otro jugador para intercambiarlos o el título de una mesa para llevarlo ahí. Toca de nuevo su nombre para cancelar.` : "Para mover jugadores: arrástralos a otra mesa o sobre otro jugador para intercambiarlos. En el celular, tócalo y luego toca el destino. Las mesas con resultado se reabren primero.";
     } else { const mh = $("moveHint"); if (mh) mh.hidden = true; }
     $("standBody").innerHTML = stand.map((x, i) =>
-      `<tr data-p="${x.id}" class="${i === 0 && x.pts > 0 ? "top1" : i < 3 && x.pts > 0 ? "top3" : ""}${i < 4 && x.pts > 0 ? " t4" : ""}${x.id === focus ? " sel" : ""}${x.id === myPid ? " mine-row" : ""}"><td class="l pos">${x.pts > 0 ? medalla(i) : i + 1}</td><td class="l nm">${esc(x.name)}${isDrop(x.id) ? ' <span class="tag drop" title="Dejó la fecha: no juega las próximas rondas, conserva sus puntos">Drop</span>' : isLate(x.id) ? ` <span class="tag late" title="Se sumó en la ronda ${S.players.find(p => p.id === x.id).late + 1}">Tardío</span>` : ""}${(ADMUI() || M.juez) && x.warn ? `<span class="wmark" title="Warnings en esta fecha">⚠ ${x.warn}</span>` : ""}${cmdLine(x.id)}</td>
+      `<tr data-p="${x.id}" class="${i === 0 && x.pts > 0 ? "top1" : i < 3 && x.pts > 0 ? "top3" : ""}${i < 4 && x.pts > 0 ? " t4" : ""}${x.id === focus ? " sel" : ""}${x.id === myPid ? " mine-row" : ""}"><td class="l pos">${x.pts > 0 ? medalla(i) : i + 1}</td><td class="l nm">${avatarHTML(x.id)}${esc(x.name)}${apodoHTML(x.id)}${isDrop(x.id) ? ' <span class="tag drop" title="Dejó la fecha: no juega las próximas rondas, conserva sus puntos">Drop</span>' : isLate(x.id) ? ` <span class="tag late" title="Se sumó en la ronda ${S.players.find(p => p.id === x.id).late + 1}">Tardío</span>` : ""}${(ADMUI() || M.juez) && x.warn ? `<span class="wmark" title="Warnings en esta fecha">⚠ ${x.warn}</span>` : ""}${cmdLine(x.id)}</td>
        <td class="pts">${x.pts}${(n => n ? `<span class="pen" title="Puntos negativos de la fecha${ADMUI() && x.pen ? " (incluye " + x.pen + " por warnings)" : ""}">−${n}</span>` : "")(ADMUI() ? x.neg : x.neg - x.pen)}</td><td>${x.w}</td><td>${x.k}</td><td>${x.s}</td><td>${x.pj}</td><td class="buch">${x.buch}</td><td class="mesa-c">${tableOf[x.id] != null ? tableOf[x.id] + 1 : "–"}</td></tr>`).join("");
     const closed = S.rounds.filter(r => r.tables.every(t => t.result)).length;
     $("standMeta").textContent = `${closed} de ${c.rounds} rondas cerradas`;
@@ -4659,8 +4678,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const acc = $("btnAccount"); acc.hidden = false;
     if (M.uid){
       const nm = M.perfil ? (M.perfil.apodo || M.perfil.nombre) : (M.email || "").split("@")[0];
-      acc.textContent = "Salir · " + nm; acc.title = "Cerrar sesión de " + (M.email || "");
-      acc.onclick = () => { if (confirm("¿Cerrar sesión?")) window.Auth.logout(); };
+      // "Mi perfil": nombre, apodo, foto, correo, contraseña y cerrar sesión
+      acc.textContent = "Mi perfil · " + nm; acc.title = "Editar tu perfil o cerrar sesión (" + (M.email || "") + ")";
+      acc.onclick = () => window.Auth.cuenta ? window.Auth.cuenta() : (confirm("¿Cerrar sesión?") && window.Auth.logout());
+      window.addEventListener("perfil-actualizado", e => { const d = e.detail || {}; acc.textContent = "Mi perfil · " + (d.nick || d.first || nm); });
     } else {
       acc.textContent = PORTAL ? "Entrar" : "Organizador";
       acc.onclick = () => window.Auth.open("login");
@@ -4683,6 +4704,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       db.collection("inscripciones").onSnapshot(q => { regs = {}; q.docs.forEach(d => { const v = d.data(); if (v) regs[d.id] = v; }); if (ready) render(); }, () => {});
       if (c.admin) db.collection("contactos").onSnapshot(q => { contactos = {}; q.docs.forEach(d => { const v = d.data(); if (v) contactos[d.id] = v; }); if (ready){ render(); if (view === "stats") renderStats(); } }, () => {});
       db.collection("votos").onSnapshot(q => { votes = {}; q.docs.forEach(d => { const v = d.data(); if (v) votes[d.id] = v; }); if (ready){ render(); autoApply(); } }, () => {});
+      db.collection("perfil_publico").onSnapshot(q => { pub = {}; q.docs.forEach(d => { const v = d.data(); if (v) pub[d.id] = v; }); if (ready){ render(); if (view === "stats") renderStats(); } }, () => {});
       db.collection("sanciones").onSnapshot(q => { sanc = {}; q.docs.forEach(d => { const v = d.data(); if (v) sanc[d.id] = v; }); if (ready){ render(); syncJuez(); } }, () => {});
     } catch(e){ fail(e); }
     render();

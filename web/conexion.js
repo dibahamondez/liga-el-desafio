@@ -73,6 +73,15 @@
 .acc .lnk:disabled{color:var(--muted);text-decoration:none;cursor:default}
 .acc .err:empty,.acc .ok:empty{display:none}
 .acc .ok{font-size:13px;color:var(--ok)}
+.acc-foto{display:flex;gap:14px;align-items:center}
+.acc-av{width:72px;height:72px;border-radius:50%;overflow:hidden;flex:none;border:2px solid var(--line);display:grid;place-items:center;background:var(--surface-2,#1d1716)}
+.acc-av img{width:100%;height:100%;object-fit:cover}
+.acc-ini{font-family:var(--f-display);font-weight:900;font-size:24px;color:var(--muted)}
+.acc-foto-btns{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.acc-foto-btns .btn{width:auto;padding:8px 14px}
+.acc-pass summary{cursor:pointer;font-size:14px;color:var(--fg);padding:4px 0}
+.acc-pass[open] summary{margin-bottom:8px}
+.acc-pass > *:not(summary){margin-top:10px}
 .acc .eye{position:relative}
 .acc .eye input{padding-right:64px}
 .acc .eye button{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--muted);font-size:12px;font-family:var(--f-num);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
@@ -150,6 +159,27 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
         <button class="btn primary" type="submit">Guardar y continuar</button>
       </form>
       <div class="links"><button class="lnk" type="button" data-logout>Salir</button></div>`, noClose:true}),
+    cuenta: () => { const c = ctx.cta || {}; return {eyebrow:"Mi cuenta", title:"Mi perfil", body:`
+      <form id="fCuenta" novalidate>
+        <div class="acc-foto">
+          <span class="acc-av">${c.avatar ? `<img id="aFotoPrev" src="${esc(c.avatar)}" alt="Tu foto de perfil">` : `<span id="aFotoPrev" class="acc-ini">${esc(((c.first || "?")[0] + (c.last || "")[0] || "").toUpperCase())}</span>`}</span>
+          <span class="acc-foto-btns"><label class="btn" for="aFoto">${c.avatar ? "Cambiar foto" : "Agregar foto"}</label><input id="aFoto" type="file" accept="image/*" hidden>${c.avatar ? '<button type="button" class="lnk" data-foto-del>Quitar foto</button>' : ""}<span class="hint">Opcional. Se ve junto a tu nombre.</span></span>
+        </div>
+        <div class="two">
+          <div class="field"><label for="aFirst">Nombre</label><input id="aFirst" type="text" autocomplete="given-name" maxlength="${R.nombreMax}" value="${esc(c.first || "")}" required></div>
+          <div class="field"><label for="aLast">Apellido</label><input id="aLast" type="text" autocomplete="family-name" maxlength="${R.nombreMax}" value="${esc(c.last || "")}" required></div>
+        </div>
+        <div class="field"><label for="aNick">Apodo (opcional)</label><input id="aNick" type="text" autocomplete="nickname" maxlength="${R.apodoMax}" value="${esc(c.nick || "")}"><p class="hint">Sale debajo de tu nombre, entre comillas.</p></div>
+        <div class="field"><label for="aEmail">Correo</label><input id="aEmail" type="email" autocomplete="email" inputmode="email" value="${esc(c.email || "")}" required>${c.google ? '<p class="hint">Entras con Google: si cambias el correo aquí, para entrar con el nuevo tendrás que usar contraseña.</p>' : '<p class="hint">Si lo cambias, te llegará un correo para confirmar.</p>'}</div>
+        <details class="acc-pass"${c.abrirPass ? " open" : ""}><summary>Cambiar contraseña</summary>
+          ${passField("aPass", "Contraseña nueva", "new-password")}
+          ${passField("aPass2", "Repite la contraseña", "new-password")}
+          <p class="hint">Mínimo ${R.passMin} caracteres, con al menos una letra y un número. Déjalas vacías si no quieres cambiarla.</p>
+        </details>
+        <span class="err" id="aErr"></span><span class="ok" id="aOk"></span>
+        <button class="btn primary" type="submit">Guardar cambios</button>
+      </form>
+      <div class="links"><button class="lnk" type="button" data-close>Cerrar</button><button class="lnk" type="button" data-logout>Cerrar sesión</button></div>`}; },
     newpass: () => ({eyebrow:"Recuperar contraseña", title:"Crea tu contraseña nueva", body:`
       <form id="fNew" novalidate>
         ${passField("aPass", "Contraseña nueva", "new-password")}
@@ -165,6 +195,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     if (!back){
       back = document.createElement("div"); back.className = "acc-back";
       back.addEventListener("click", onClick); back.addEventListener("submit", onSubmit);
+      back.addEventListener("change", e => { if (e.target.id === "aFoto" && e.target.files && e.target.files[0]) fotoChica(e.target.files[0]); });
       back.addEventListener("input", e => { if (e.target.id === "aCode") e.target.value = e.target.value.replace(/\D/g, "").slice(0, R.codigoLargo); });
       document.addEventListener("keydown", e => { if (e.key === "Escape" && back && !back.hidden && !VIEWS[view]().noClose && Auth.closable) close(); });
       document.body.appendChild(back);
@@ -247,6 +278,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       busy(f, true);
       const {data:{user}} = await sb.auth.getUser();
       const {error} = await sb.from("perfiles").upsert({id:user.id, nombre:first, apellido:last, apodo:nick || null});
+      if (!error && nick){ try { await sb.from("perfil_publico").upsert({user_id:user.id, data:{apodo:nick, nombre:(first + " " + last).trim()}}); } catch(e){} }
       busy(f, false);
       if (error) return setErr(friendly(error));
       return done();
@@ -294,6 +326,40 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       if (error) return setErr(friendly(error));
       return toCode("recovery", email);
     }
+    if (f.id === "fCuenta"){
+      const c = ctx.cta || {};
+      const first = clean($a("aFirst").value), last = clean($a("aLast").value), nick = clean($a("aNick").value);
+      const email = clean($a("aEmail").value).toLowerCase(), p1 = $a("aPass").value, p2 = $a("aPass2").value;
+      const err = nameErr(first, "nombre") || nameErr(last, "apellido") ||
+        (nick && (nick.length < R.apodoMin || nick.length > R.apodoMax) ? `El apodo debe tener entre ${R.apodoMin} y ${R.apodoMax} caracteres.` : "") ||
+        (!EMAIL_RE.test(email) ? "Escribe un correo válido." : "") ||
+        (p1 || p2 ? (checkPass(p1) || (p1 !== p2 ? "Las contraseñas no coinciden." : "")) : "");
+      if (err) return setErr(err);
+      busy(f, true);
+      const {data:{user}} = await sb.auth.getUser();
+      const avisos = [];
+      let r = await sb.from("perfiles").upsert({id:user.id, nombre:first, apellido:last, apodo:nick || null});
+      if (r.error){ busy(f, false); return setErr(friendly(r.error)); }
+      const pub = {nombre:(first + " " + last).trim()}; if (nick) pub.apodo = nick; if (c.avatar) pub.avatar = c.avatar;
+      r = await sb.from("perfil_publico").upsert({user_id:user.id, data:pub, actualizado:new Date().toISOString()});
+      if (r.error) avisos.push("No se pudo guardar el apodo o la foto para los demás jugadores (falta actualizar la base de datos).");
+      if (email !== (c.email || "")){
+        const e2 = await sb.auth.updateUser({email});
+        if (e2.error){ busy(f, false); return setErr(friendly(e2.error)); }
+        avisos.push(`Te enviamos un correo a ${email} para confirmar el cambio.`);
+      }
+      if (p1){
+        const e3 = await sb.auth.updateUser({password:p1});
+        if (e3.error){ busy(f, false); return setErr(friendly(e3.error)); }
+        avisos.push("Contraseña actualizada.");
+      }
+      busy(f, false);
+      Object.assign(c, {first, last, nick, email: email !== c.email && avisos.length ? c.email : email});
+      const ok = $a("aOk"); if (ok) ok.textContent = ["Cambios guardados."].concat(avisos).join(" ");
+      $a("aPass").value = ""; $a("aPass2").value = "";
+      try { window.dispatchEvent(new CustomEvent("perfil-actualizado", {detail:{first, last, nick, avatar:c.avatar || null}})); } catch(e){}
+      return;
+    }
     if (f.id === "fNew"){
       const p1 = $a("aPass").value, p2 = $a("aPass2").value;
       const err = checkPass(p1) || (p1 !== p2 ? "Las contraseñas no coinciden." : "");
@@ -306,8 +372,25 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       return done();
     }
   }
+  // Foto de perfil: recorte cuadrado de 160 px en JPEG (liviana para guardarla junto al perfil)
+  function fotoChica(file){
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const N = 160, cv = document.createElement("canvas"); cv.width = cv.height = N;
+      const lado = Math.min(img.width, img.height), sx = (img.width - lado) / 2, sy = (img.height - lado) / 2;
+      cv.getContext("2d").drawImage(img, sx, sy, lado, lado, 0, 0, N, N);
+      URL.revokeObjectURL(url);
+      const vals = {first:$a("aFirst").value, last:$a("aLast").value, nick:$a("aNick").value, email:$a("aEmail").value};
+      ctx.cta = Object.assign(ctx.cta || {}, {first:vals.first, last:vals.last, nick:vals.nick, avatar:cv.toDataURL("image/jpeg", 0.82)});
+      const em = ctx.cta.email; show("cuenta"); $a("aEmail").value = vals.email || em || "";
+      const ok = $a("aOk"); if (ok) ok.textContent = "Foto lista. Toca “Guardar cambios”.";
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); setErr("No se pudo leer esa imagen."); };
+    img.src = url;
+  }
   async function onClick(e){
     const t = e.target;
+    if (t.closest("[data-foto-del]")){ const v = {first:$a("aFirst").value, last:$a("aLast").value, nick:$a("aNick").value}; ctx.cta = Object.assign(ctx.cta || {}, v, {avatar:null}); show("cuenta"); const ok = $a("aOk"); if (ok) ok.textContent = "Foto quitada. Toca “Guardar cambios”."; return; }
     if (t === back && Auth.closable && !VIEWS[view]().noClose) return close();
     if (t.closest("[data-close]")) return close();
     if (t.closest("[data-logout]")){ if (sb) await sb.auth.signOut(); location.reload(); return; }
@@ -355,6 +438,19 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       show(v || "login");
     },
     close,
+    // "Mi perfil": carga los datos actuales y abre el formulario
+    async cuenta(){
+      if (!sb) return;
+      const {data:{user}} = await sb.auth.getUser(); if (!user) return show("login");
+      const [p, pb] = await Promise.all([
+        sb.from("perfiles").select("nombre,apellido,apodo").eq("id", user.id).maybeSingle(),
+        sb.from("perfil_publico").select("data").eq("user_id", user.id).maybeSingle()
+      ]);
+      const pr = (p && p.data) || {}, pu = (pb && pb.data && pb.data.data) || {};
+      const prov = (user.app_metadata && user.app_metadata.providers) || [user.app_metadata && user.app_metadata.provider];
+      ctx.cta = {first:pr.nombre || "", last:pr.apellido || "", nick:pu.apodo || pr.apodo || "", email:(user.email || "").toLowerCase(), avatar:pu.avatar || null, google:(prov || []).includes("google") && !(prov || []).includes("email")};
+      show("cuenta");
+    },
     async logout(){ if (sb) await sb.auth.signOut(); location.reload(); }
   };
   window.Auth = Auth;
@@ -368,6 +464,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     inscripciones: {key:"user_id", shape:"data"},
     contactos:     {key:"id",      shape:"data"},   // correos de jugadores: solo organizadores
     sanciones:     {key:"id",      shape:"data", scoped:true},   // warnings y restas que pone el juez
+    perfil_publico:{key:"user_id", shape:"data"},                 // apodo y foto de perfil (los ve todos)
     vinculos:      {key:"user_id", shape:"cols", scoped:true}
   };
   T.votos.scoped = true; T.inscripciones.scoped = true;
