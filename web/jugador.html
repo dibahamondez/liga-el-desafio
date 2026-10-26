@@ -471,6 +471,11 @@ body.display #mainGrid,body.display .clock{animation:none}
 .alias-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface-2)}
 .alias-row small{color:var(--muted)}.alias-btns{display:flex;gap:6px;flex-wrap:wrap}
 .alias-row select{min-width:180px;flex:1}
+/* Mis estadísticas: ilustración del comandante favorito de fondo */
+.box.fav-box{position:relative;overflow:hidden;isolation:isolate}
+.box.fav-box > *:not(.cmd-bg){position:relative;z-index:1}
+.box.fav-box .cmd-bg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center 25%;opacity:.28;filter:blur(1px);-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 55%);mask-image:linear-gradient(90deg,transparent 0%,#000 55%)}
+.box.fav-box b{text-shadow:0 1px 6px rgba(0,0,0,.9)}
 td.cmd-art,.bars li.cmd-art{position:relative;overflow:hidden;isolation:isolate}
 .bars li.cmd-art{border-radius:10px}
 .bars li.cmd-art > *:not(.cmd-bg){position:relative;z-index:1}
@@ -1966,7 +1971,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         <div class="stand-scroll"><table><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th>Pts</th><th title="Puntos negativos: penalizaciones y warnings">Neg</th><th>Base</th><th>Bono</th><th>${B3 ? "Comandantes" : "Mazos"}</th><th>Fechas</th><th>V</th><th>K</th><th>PJ</th><th class="l">${B3 ? "Comandante más usado" : "Mazo más usado"}</th></tr></thead><tbody>${standVis.map((p, i) => {
           const top = Object.entries(p.decks).sort((a, b) => b[1] - a[1])[0];
           const pk = fold(p.nombre).trim();
-          return `<tr class="${i === 0 ? "top1" : i < 3 ? "top3" : ""}${i < 4 ? " t4" : ""}${STADM() && editPlayer === pk ? " sel" : ""}" ${STADM() ? `data-edit-player="${esc(pk)}" title="Editar estadísticas de ${esc(p.nombre)}" style="cursor:pointer"` : 'style="cursor:default"'}><td class="l pos">${medalla(i)}</td><td class="l nm">${esc(p.nombre)}${STADM() ? ' <span class="edit-hint">✎</span>' : ""}</td><td class="pts">${p.pts}</td><td>${p.neg ? `<span class="neg">−${p.neg}</span>` : "–"}</td><td>${p.base}</td><td>${p.bono ? `<span class="bono">+${p.bono}</span>` : "–"}</td><td title="${statMonth === "all" ? "Mazos distintos en todo el histórico" : "Mazos distintos jugados este mes"}">${statMonth === "all" ? p.distintos : `<span class="${p.distintos >= BONO_MAZOS ? "ok-t" : ""}">${Math.min(p.distintos, BONO_MAZOS)}/${BONO_MAZOS}</span>`}</td><td>${statMonth === "all" ? p.fechas : p.fechas + "/" + ((calOf(statMonth) && calOf(statMonth).fechas.length) || FECHAS_MES)}</td><td>${p.w}</td><td>${p.kills}</td><td>${p.pj}</td><td class="l${B3 && cmdDeKey(top && top[0]) ? " cmd-art" : ""}" style="color:var(--muted)">${B3 ? artFondo(cmdDeKey(top && top[0])) : ""}${top ? (DECK[top[0]] ? `<span class="deck-set">${setIcon(DECK[top[0]].set)}${esc(DECK[top[0]].name)}</span>` : `<span class="deck-set">${(c => c != null ? `<span class="ci">${ciPips(c)}</span>` : "")(ciFor(top[0].replace(/^c:/, "")))}${esc(top[0].replace(/^c:/, ""))}</span>`) : "–"}</td></tr>`; }).join("")}</tbody></table></div>${STADM() ? `<p class="note" style="margin:0">Organizador: toca a un jugador para corregir sus números. ${topN ? `Los jugadores ven solo el top ${topN}; tú los ves a todos (${stand.length}).` : "Los jugadores ven el standing completo."}</p>` : standVis.length < stand.length ? '<p class="note" style="margin:0">Se muestra el top ' + standVis.length + '. Tu posición y todos tus números están en “Mis estadísticas”.</p>' : ""}</div>
+          return `<tr class="${i === 0 ? "top1" : i < 3 ? "top3" : ""}${i < 4 ? " t4" : ""}${STADM() && editPlayer === pk ? " sel" : ""}" ${STADM() ? `data-edit-player="${esc(pk)}" title="Editar estadísticas de ${esc(p.nombre)}" style="cursor:pointer"` : 'style="cursor:default"'}><td class="l pos">${medalla(i)}</td><td class="l nm">${esc(p.nombre)}${STADM() ? ' <span class="edit-hint">✎</span>' : ""}</td><td class="pts">${p.pts}</td><td>${p.neg ? `<span class="neg">−${p.neg}</span>` : "–"}</td><td>${p.base}</td><td>${p.bono ? `<span class="bono">+${p.bono}</span>` : "–"}</td><td title="${statMonth === "all" ? "Mazos distintos en todo el histórico" : "Mazos distintos jugados este mes"}">${statMonth === "all" ? p.distintos : `<span class="${p.distintos >= BONO_MAZOS ? "ok-t" : ""}">${Math.min(p.distintos, BONO_MAZOS)}/${BONO_MAZOS}</span>`}</td><td>${statMonth === "all" ? p.fechas : p.fechas + "/" + ((calOf(statMonth) && calOf(statMonth).fechas.length) || FECHAS_MES)}</td><td>${p.w}</td><td>${p.kills}</td><td>${p.pj}</td><td class="l${cmdDeKey(top && top[0]) ? " cmd-art" : ""}" style="color:var(--muted)">${artFondo(cmdDeKey(top && top[0]), top && DECK[top[0]] ? artMazo(top[0]) : "")}${top ? (DECK[top[0]] ? `<span class="deck-set">${setIcon(DECK[top[0]].set)}${esc(DECK[top[0]].name)}</span>` : `<span class="deck-set">${(c => c != null ? `<span class="ci">${ciPips(c)}</span>` : "")(ciFor(top[0].replace(/^c:/, "")))}${esc(top[0].replace(/^c:/, ""))}</span>`) : "–"}</td></tr>`; }).join("")}</tbody></table></div>${STADM() ? `<p class="note" style="margin:0">Organizador: toca a un jugador para corregir sus números. ${topN ? `Los jugadores ven solo el top ${topN}; tú los ves a todos (${stand.length}).` : "Los jugadores ven el standing completo."}</p>` : standVis.length < stand.length ? '<p class="note" style="margin:0">Se muestra el top ' + standVis.length + '. Tu posición y todos tus números están en “Mis estadísticas”.</p>' : ""}</div>
       ${STADM() && editPlayer ? editStatsHTML(evsAll, statMonth) : ""}
       <div class="stats-grid">
         <div class="card"><div class="sec-head" style="margin:0"><h3>Jugadores con más kills</h3>${seg}</div><p class="card-sub" style="margin:0"><b>${killsTot}</b> kills en total ${rankScope === "all" ? "en el histórico" : "en el " + (statMonth === "all" ? "período" : "mes")}</p>${bars(playerKills)}</div>
@@ -2125,7 +2130,12 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       </div>
       <div class="mine-grid">
         <div class="box"><h3>Últimas fechas</h3><ul class="hist">${mine.slice(0, 6).map(({e, j}) => `<li><span class="r">${fmtDate(e.fecha)}</span><span class="vs">${DECK[j.k] ? esc(DECK[j.k].name) : "–"} · ${j.w} V · ${j.kills} K</span><span class="res ${j.pts >= 6 ? "w" : ""}">${j.pts} pts${j.neg ? ` (−${j.neg})` : ""}${e.enCurso ? " · En curso" : ""}</span></li>`).join("") || '<li><span class="vs">Todavía no hay fechas registradas.</span></li>'}</ul></div>
-        <div class="box"><h3>Tus favoritos</h3>${B3 ? "" : `<p class="msg" style="margin:0">Mazo más jugado: <b>${topDeck && DECK[topDeck[0]] ? esc(DECK[topDeck[0]].name) + " (" + topDeck[1] + ")" : "–"}</b></p>`}<p class="msg" style="margin:0">Comandante con más kills: <b>${topCmd ? esc(topCmd[0]) + " (" + topCmd[1] + ")" : "–"}</b></p>${B3 ? (() => { const cc = {}; mine.forEach(({j}) => { if (j.cmd) cc[j.cmd] = (cc[j.cmd] || 0) + 1; }); const t = Object.entries(cc).sort((a, b) => b[1] - a[1])[0]; return `<p class="msg" style="margin:0">Comandante más jugado: <b>${t ? esc(t[0]) + " (" + t[1] + ")" : "–"}</b></p>`; })() : ""}<p class="msg" style="margin:0" ${B3 ? "hidden" : ""}>Edición favorita: <b>${topEd ? esc(topEd[0]) + " (" + topEd[1][0] + (topEd[1][0] === 1 ? " vez" : " veces") + ")" : "–"}</b></p><p class="msg" style="margin:0">Mesas ganadas: <b>${tot.w} de ${tot.pj} (${pct}%)</b></p></div>
+        <div class="box fav-box cmd-art">${(() => {
+          // De fondo, el comandante que más usa (en Precon, el de su mazo más jugado; MH3 con el arte del collector edition)
+          if (!B3) return topDeck && DECK[topDeck[0]] ? artFondo(DECK[topDeck[0]].cmd, artMazo(topDeck[0])) : "";
+          const cc = {}; mine.forEach(({j}) => { if (j.cmd) cc[j.cmd] = (cc[j.cmd] || 0) + 1; });
+          const t = Object.entries(cc).sort((a, b) => b[1] - a[1])[0]; return t ? artFondo(t[0]) : "";
+        })()}<h3>Tus favoritos</h3>${B3 ? "" : `<p class="msg" style="margin:0">Mazo más jugado: <b>${topDeck && DECK[topDeck[0]] ? esc(DECK[topDeck[0]].name) + " (" + topDeck[1] + ")" : "–"}</b></p>`}<p class="msg" style="margin:0">Comandante con más kills: <b>${topCmd ? esc(topCmd[0]) + " (" + topCmd[1] + ")" : "–"}</b></p>${B3 ? (() => { const cc = {}; mine.forEach(({j}) => { if (j.cmd) cc[j.cmd] = (cc[j.cmd] || 0) + 1; }); const t = Object.entries(cc).sort((a, b) => b[1] - a[1])[0]; return `<p class="msg" style="margin:0">Comandante más jugado: <b>${t ? esc(t[0]) + " (" + t[1] + ")" : "–"}</b></p>`; })() : ""}<p class="msg" style="margin:0" ${B3 ? "hidden" : ""}>Edición favorita: <b>${topEd ? esc(topEd[0]) + " (" + topEd[1][0] + (topEd[1][0] === 1 ? " vez" : " veces") + ")" : "–"}</b></p><p class="msg" style="margin:0">Mesas ganadas: <b>${tot.w} de ${tot.pj} (${pct}%)</b></p></div>
         <div class="box"><h3>Tus rivales</h3>${rv.length ? `<p class="msg" style="margin:0">Más enfrentado: <b>${esc(masVisto[0])}</b> (${masVisto[1][0]} ${masVisto[1][0] === 1 ? "mesa" : "mesas"})</p>
           <p class="msg" style="margin:0">Tu némesis: <b>${nemesis ? esc(nemesis[0]) : "–"}</b>${nemesis ? ` (te ganó ${nemesis[1][1]} ${nemesis[1][1] === 1 ? "mesa" : "mesas"})` : ""}</p>
           <p class="msg" style="margin:0">Tu víctima favorita: <b>${victima ? esc(victima[0]) : "–"}</b>${victima ? ` (le ganaste ${victima[1][2]} ${victima[1][2] === 1 ? "mesa" : "mesas"})` : ""}</p>
@@ -2716,12 +2726,28 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   const artPend = new Set(), artPedidos = new Set(); let artT = 0;
   const artNombre = n => String(n || "").split(" + ")[0].split(" // ")[0].trim();
   const artDe = card => { const u = (card.image_uris && card.image_uris.art_crop) || (card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris && card.card_faces[0].image_uris.art_crop); return u || null; };
-  function artUrl(n){
-    const nm = artNombre(n), k = fold(nm).trim(); if (!k) return "";
-    if (k in ART) return ART[k] || "";
+  // set: código de edición de Scryfall para usar una impresión específica (MH3: la del collector edition)
+  function artUrl(n, set){
+    const nm = artNombre(n), k = (set ? set + "|" : "") + fold(nm).trim(); if (!nm) return "";
+    if (k in ART) return ART[k] || (set ? artUrl(n) : "");
+    if (set){ if (!artPedidos.has(k)){ artPedidos.add(k); artColeccion(nm, set, k); } return artUrl(n); }
     if (!artPedidos.has(k)){ artPend.add(nm); clearTimeout(artT); artT = setTimeout(cargarArte, 120); }
     return "";
   }
+  // Collector edition (Modern Horizons 3): de las impresiones del comandante en esa edición, la especial (sin borde, grabada o arte extendido)
+  async function artColeccion(nm, set, k){
+    try {
+      const j = await getJSON("https://api.scryfall.com/cards/search?unique=prints&order=set&q=" + encodeURIComponent(`!"${nm}" set:${set}`));
+      const cartas = (j && j.data) || [];
+      const especial = c => (c.border_color === "borderless" ? 2 : 0) + ((c.frame_effects || []).some(f => /etched|extendedart|showcase|inverted/.test(f)) ? 1 : 0) + (c.promo_types || []).length * 0.1;
+      const elegida = cartas.slice().sort((a, b) => especial(b) - especial(a) || (parseInt(b.collector_number, 10) || 0) - (parseInt(a.collector_number, 10) || 0))[0];
+      ART[k] = elegida ? artDe(elegida) : null;
+    } catch(e){ ART[k] = null; }
+    try { localStorage.setItem(ART_CK, JSON.stringify(ART)); } catch(e){}
+    ciRefresh();
+  }
+  // Ilustración del comandante de un mazo: los precon de MH3 usan la del collector edition
+  const artMazo = k => { const d = k && DECK[k]; if (!d) return ""; return artUrl(d.cmd, /modern horizons 3/i.test(d.set) ? "m3c" : null); };
   async function cargarArte(){
     const want = [...artPend].filter(n => !artPedidos.has(fold(n).trim())); artPend.clear();
     if (!want.length) return;
@@ -2747,7 +2773,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   // Nombre del comandante a partir de la clave del mazo ("c:Nombre" o un precon del catálogo)
   const cmdDeKey = k => !k ? "" : k.startsWith("c:") ? k.slice(2) : (DECK[k] && DECK[k].cmd) || "";
-  const artFondo = n => { const u = n ? artUrl(n) : ""; return u ? `<span class="cmd-bg" aria-hidden="true" style="background-image:url('${u.replace(/'/g, "%27")}')"></span>` : ""; };
+  const artFondo = (n, u0) => { const u = u0 || (n ? artUrl(n) : ""); return u ? `<span class="cmd-bg" aria-hidden="true" style="background-image:url('${u.replace(/'/g, "%27")}')"></span>` : ""; };
   // Challa y serpentinas al pasar el mouse o tocar al campeón del salón de la fama
   let ultimaChalla = 0;
   function challa(el){
