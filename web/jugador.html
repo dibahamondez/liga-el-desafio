@@ -930,7 +930,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         <h2 id="mesasTitle">Mesas</h2>
         <span class="meta" id="mesasMeta"></span>
         <span class="tv-page" id="tvMesas"></span>
-        <button class="btn ghost adm imp-btn" id="btnImp" type="button">Importar resultados</button>
+        <button class="btn ghost adm imp-btn" id="btnPegarMesas" type="button" title="Pega las mesas armadas en texto (por ejemplo, desde WhatsApp) y la ronda queda así">Pegar mesas</button>
+        <button class="btn ghost adm imp-btn" id="btnImp" type="button" style="margin-left:0">Importar resultados</button>
       </div>
       <div class="imp adm" id="impBox" hidden>
         <div class="imp-h"><b class="imp-t">Importar resultados a la <select id="impRonda" aria-label="Ronda a importar"></select></b><button class="btn ghost" id="btnImpX" type="button" aria-label="Cerrar">✕</button></div>
@@ -3815,6 +3816,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   function impParse(txt){
     const lines = String(txt || "").replace(/\r/g, "").split("\n");
     let cols = null, mesaAct = null; const rows = [];
+    // Si los jugadores vienen con viñetas ("- Nombre"), las líneas sin viñeta (títulos, "¡Suerte a todos!") no son jugadores
+    const VIN = /^\s*(>+|[-•*·–]|\d+[.)])\s*\S/;
+    const conVinetas = lines.some(l => VIN.test(l) && !/mesa\s*\d+/i.test(l));
     for (const raw of lines){
       if (!raw.trim()) continue;
       const cells = raw.includes("\t") ? raw.split("\t") : raw.includes(";") ? raw.split(";") : raw.includes("|") ? raw.split("|") : null;
@@ -3835,9 +3839,11 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       } else {
         // Texto libre: "Mesa 1 Marco Camargo ganó 3" / "Mesa 2 Felipe Flores empató" / "Mesa 3 Luna Lopez 1 kill"
         // o un título "MESA 1" seguido de los jugadores en líneas aparte (">> Marco Camargo", "- David Lunt", "• …")
-        const tit = /^\s*mesa\s*(\d+)\s*[:\-.]?\s*$/i.exec(raw); if (tit){ mesaAct = +tit[1]; continue; }
+        // Título de mesa, también decorado: "MESA 1", "--- MESA 1 ---", "== Mesa 1 ==", "*MESA 1*"
+        const tit = /^[\s\-=*#_~>–—|]*mesa\s*(\d+)[\s:\-=*#_~.–—|]*$/i.exec(raw); if (tit){ mesaAct = +tit[1]; continue; }
         let m = /^\s*mesa\s*(\d+)\s*[:\-.]?\s*(.+)$/i.exec(raw);
-        if (!m && mesaAct != null && !/^\s*ronda\b/i.test(raw)){ const nm = raw.replace(/^\s*(>+|[-•*·]|\d+[.)])\s*/, "").trim(); if (nm) m = [raw, mesaAct, nm]; }
+        if (!m && mesaAct != null && conVinetas && !VIN.test(raw)) continue;
+        if (!m && mesaAct != null && !/^\s*ronda\b/i.test(raw)){ const nm = raw.replace(/^\s*(>+|[-•*·–]|\d+[.)])\s*/, "").trim(); if (nm) m = [raw, mesaAct, nm]; }
         if (!m) continue;
         let rest = m[2], win = false, tie = false, warn = false, k = 0, ck = 0;
         const pal = (re, fn) => { rest = rest.replace(new RegExp("(^|\\s)(" + re + ")(?=\\s|$|[,.;:])", "ig"), () => { fn(); return " "; }); };
@@ -4006,9 +4012,22 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (!box.hidden){ impRondas(VR(), true); }
   }
   $("btnImp").addEventListener("click", () => impAbrir());
+  // Pegar mesas ya armadas (texto tipo "--- MESA 1 --- / - Nombre"): usa el mismo importador, sin resultados
+  $("btnPegarMesas").addEventListener("click", () => {
+    impAbrir(true);
+    const t = $("impTxt");
+    t.placeholder = "Pega aquí las mesas, por ejemplo:\n\n--- MESA 1 ---\n- Hans Solsbach\n- Nicolás Núñez\n- Eric Riquelme\n- Juan Salcedo\n\n--- MESA 2 ---\n- …\n\nLa ronda elegida arriba queda armada así (sin resultados).";
+    t.focus();
+  });
   $("btnImpX").addEventListener("click", () => impAbrir(false));
   $("impFile").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) leerImagen(f); e.target.value = ""; });
-  $("impTxt").addEventListener("input", () => { clearTimeout(impAbrir.t); impAbrir.t = setTimeout(impPreview, 300); });
+  $("impTxt").addEventListener("input", () => {
+    // Si el texto dice "RONDA N", se elige esa ronda (si ya existe)
+    const m = /ronda\s*(\d+)/i.exec($("impTxt").value), i = m ? +m[1] - 1 : -1;
+    if (S && i >= 0 && i <= S.cur && i !== VR()){ vRound = i >= S.cur ? null : i; moveSel = null; render(); impRondas(i); }
+    const est = $("impEst"); if (est) est.textContent = S && i > S.cur ? `Ojo: el texto dice ronda ${i + 1}, pero la ronda actual es la ${S.cur + 1}. Si importas, se arma la ronda elegida arriba.` : "";
+    clearTimeout(impAbrir.t); impAbrir.t = setTimeout(impPreview, 300);
+  });
   $("impTxt").addEventListener("paste", e => { const it = [...(e.clipboardData && e.clipboardData.items || [])].find(i => i.type.startsWith("image/")); if (it){ e.preventDefault(); leerImagen(it.getAsFile()); } });
   $("btnImpGo").addEventListener("click", () => {
     if (!M.admin && M.mode === "live") return;
