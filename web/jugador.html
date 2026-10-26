@@ -390,6 +390,9 @@ td.nm .cmd{max-width:220px}
 .reg-act button:hover{color:var(--fg);border-color:var(--muted)}
 .insc-close{justify-content:flex-start}
 .insc-phase .controls{display:none!important}
+body.is-admin.insc-phase:not(.display) .clock{padding:12px 18px}
+body.is-admin.insc-phase:not(.display) .digits{font-size:clamp(44px,7vw,80px);margin:6px 0 2px}
+body.is-admin.insc-phase:not(.display) .clock .bar{display:none}
 body.view-stats .live-only,body.view-sorteo .live-only,body.view-warn .live-only,body.view-reglas .live-only,body.view-salon .live-only{display:none!important}
 /* Salón de la fama */
 .salon{display:flex;flex-direction:column;gap:18px}
@@ -1576,7 +1579,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       <div class="insc-grid">${adminForm}${self}
         <div class="box insc-list"><h3>Participantes</h3>${n ? `<ol class="reg-list">${list.map((r, i) => `<li><span class="n">${i + 1}</span><span class="nm-wrap"><span class="nm">${esc(fullName(r))}</span>${verTodo() || (M.uid && (r.id === "u:" + M.uid || links[M.uid] === r.id)) ? cmdLineDeck(r.deck, true) : (r.deck && (r.deck.k || r.deck.c) ? OCULTO : cmdLineDeck(r.deck, true))}${ADMUI() && (r.email || correoDe(fullName(r))) ? `<span class="cmd">${esc(r.email || correoDe(fullName(r)))}</span>` : ""}</span>${ADMUI() ? `<span class="reg-act">${r.src === "admin" ? `<button type="button" data-reg-edit="${esc(r.id)}">Editar</button>` : '<span class="tag">Por cuenta</span>'}<button type="button" data-reg-del="${esc(r.id)}">Quitar</button></span>` : ""}</li>`).join("")}</ol>` : '<p class="msg">Todavía no hay inscritos.</p>'}</div>
       </div>
-      ${ADMUI() ? `<div class="row insc-close"><button class="btn primary" id="btnCloseInsc" type="button" ${n < 3 ? "disabled" : ""}>Cerrar inscripciones y armar ronda 1</button><span class="note">${n < 3 ? "Se necesitan al menos 3 participantes." : "Después de cerrar, las mesas de la ronda 1 se sortean al azar."}</span></div>` : ""}`;
+`;
   }
   function cmdLineDeck(d, long){
     if (!d || !(d.k || d.c)) return `<span class="cmd none">${B3 ? "Sin comandante declarado" : "Sin mazo declarado"}</span>`;
@@ -4379,7 +4382,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-guia]"); if (!b) return;
     const a = b.dataset.guia;
-    if (a === "closeInsc"){ const x = $("btnCloseInsc"); if (x) x.click(); }
+    if (a === "closeInsc"){ closeInsc(); }
     else if (a === "start") $("btnStart").click();
     else if (a === "next") $("btnNext").click();
     else if (a === "rearmar") $("btnRearmar").click();
