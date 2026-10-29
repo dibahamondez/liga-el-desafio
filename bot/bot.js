@@ -217,7 +217,7 @@ async function iniciar() {
 let pausado = false, gruposMenu = null;
 const DIR_IMG = path.join(DIR, "imagenes-para-enviar");
 // Texto fijo del GIF de buen día
-const TEXTO_GIF = "☀️ ¡Buen día, grupo! (menos para el Kevin) 😎";
+const TEXTO_GIF = "☀️ ¡Buen día, grupo! 😎";
 // Texto que acompaña por defecto a algunas imágenes (por nombre de archivo)
 const TEXTO_IMAGEN = {
 
