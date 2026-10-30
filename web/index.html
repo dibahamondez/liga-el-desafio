@@ -698,7 +698,7 @@ body.portal #sampleBanner{display:none!important}
 }
 @media (max-width:900px){.sorteo-grid{grid-template-columns:minmax(0,1fr)}}
 .sorteo-side{display:flex;flex-direction:column;gap:14px;min-width:0}
-.wheel-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;min-width:0}
+.wheel-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;min-width:0;overflow-x:clip;overflow-y:visible;padding-right:2px}
 .wheel-box{position:relative;width:min(100%,600px);aspect-ratio:1;max-width:100%}
 .wheel-box canvas{width:100%;height:100%;display:block;border-radius:50%;will-change:transform;transform:translateZ(0)}
 /* El borde y la sombra van en una capa aparte que no se repinta mientras la ruleta gira (antes trababa el giro en equipos lentos) */
@@ -706,8 +706,9 @@ body.portal #sampleBanner{display:none!important}
 .wheel-box::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .4s;box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--gold),0 0 50px rgba(233,180,76,.45)}
 .wheel-box.girando::after{opacity:1}
 /* Fuego alrededor de la ruleta mientras gira: capa detrás de la rueda, más grande que ella */
-#fuego{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;z-index:0}
+#fuego{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;z-index:2}
 #wheel{position:relative;z-index:1}
+.dragon-asoma{position:absolute;right:0;top:2%;width:30%;height:auto;z-index:0;pointer-events:none;opacity:0;transform-origin:30% 80%;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6))}
 .wheel-box .hub{z-index:3}
 .wheel-box .pointer{z-index:4}
 .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:34px solid var(--gold);filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))}
@@ -2802,60 +2803,89 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, size, size);
     g.save(); g.translate(r, r); g.rotate(list.length ? wheelRot : 0); g.drawImage(wheelCache.cv, -r, -r, size, size); g.restore();
   }
-  // ---------- Fuego alrededor de la ruleta mientras gira ----------
-  // Partículas que nacen en el borde y salen hacia afuera y hacia arriba; más fuego mientras más rápido gira.
-  // Se dibujan con una imagen de llama ya preparada y mezcla aditiva (barato aunque sean muchas).
-  const FUEGO = {parts: [], vel: 0, on: false, raf: 0, spr: null, size: 0, brillo: 0};
-  function fuegoSprite(){
-    // lengua de fuego ya alargada (más alta que ancha): así no hay que girarla al dibujar
-    const c = document.createElement("canvas"); c.width = 48; c.height = 96; const g = c.getContext("2d");
-    g.setTransform(1, 0, 0, 2, 0, 0);
-    const gr = g.createRadialGradient(24, 28, 0, 24, 28, 24);
+  // ---------- La ruleta se incendia mientras gira ----------
+  // Las llamas nacen en el borde de la rueda y giran con ella (un poco más lento, así quedan como estela detrás del giro),
+  // se abren hacia afuera y suben. Más fuego mientras más rápido gira; al frenar se va apagando.
+  // Las lenguas de fuego se preparan una vez en 32 ángulos y se estampan con mezcla aditiva (barato aunque sean muchas).
+  const FUEGO = {parts: [], vel: 0, w: 0, on: false, raf: 0, spr: null, size: 0, brillo: 0};
+  const FUEGO_ANG = 32;
+  function fuegoSprites(){
+    const base = document.createElement("canvas"); base.width = 48; base.height = 96; const b = base.getContext("2d");
+    b.setTransform(1, 0, 0, 2, 0, 0);
+    const gr = b.createRadialGradient(24, 28, 0, 24, 28, 24);
     gr.addColorStop(0, "rgba(255,240,180,1)"); gr.addColorStop(.25, "rgba(255,170,40,.9)"); gr.addColorStop(.55, "rgba(230,70,10,.45)"); gr.addColorStop(1, "rgba(160,20,0,0)");
-    g.fillStyle = gr; g.fillRect(0, 0, 48, 48); return c;
+    b.fillStyle = gr; b.fillRect(0, 0, 48, 48);
+    // la punta de la llama (arriba del sprite) apunta hacia donde se mueve; se dibuja centrada en su base
+    return Array.from({length: FUEGO_ANG}, (_, k) => {
+      const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+      g.translate(64, 64); g.rotate(k / FUEGO_ANG * Math.PI * 2); g.drawImage(base, -24, -86, 48, 96); return c;
+    });
   }
   function fuegoCuadro(){
     const c = $("fuego"); if (!c){ FUEGO.raf = 0; return; }
-    if (!FUEGO.spr) FUEGO.spr = fuegoSprite();
+    if (!FUEGO.spr) FUEGO.spr = fuegoSprites();
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     if (!FUEGO.size || !FUEGO.on) FUEGO.size = Math.round(c.getBoundingClientRect().width) || FUEGO.size;
     const W = FUEGO.size; if (!W){ FUEGO.raf = requestAnimationFrame(fuegoCuadro); return; }
     if (c.width !== Math.round(W * dpr)){ c.width = c.height = Math.round(W * dpr); }
     const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, W);
     const cx = W / 2, R = W / 2 / 1.32;   // radio de la rueda dentro de la capa
-    // nuevas llamas según la velocidad del giro
-    const v = FUEGO.on ? Math.min(1, FUEGO.vel) : 0;
+    const v = FUEGO.on ? Math.min(1, FUEGO.vel) : 0, wv = FUEGO.on ? FUEGO.w : FUEGO.w * 0.9;
     FUEGO.brillo += ((FUEGO.on ? 0.35 + v * 0.65 : 0) - FUEGO.brillo) * 0.08;
-    const nuevas = FUEGO.on ? Math.round(3 + v * 7) : 0;
-    for (let k = 0; k < nuevas && FUEGO.parts.length < 220; k++){
-      const a = Math.random() * Math.PI * 2, sp = (0.25 + Math.random() * 0.8) * (0.5 + v);
-      FUEGO.parts.push({x: cx + Math.cos(a) * (R - 8), y: cx + Math.sin(a) * (R - 8), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (0.5 + Math.random() * 0.9),
-        t: 0, vida: 18 + Math.random() * 24, s: (26 + Math.random() * 34) * (0.55 + v * 0.7)});
+    const nuevas = FUEGO.on ? Math.round(4 + v * 9) : 0;
+    for (let k = 0; k < nuevas && FUEGO.parts.length < 240; k++){
+      FUEGO.parts.push({th: Math.random() * Math.PI * 2, rho: R * (0.9 + Math.random() * 0.1), vr: (0.3 + Math.random() * 1.1) * (0.5 + v),
+        lag: 0.55 + Math.random() * 0.35, up: 0, t: 0, vida: 18 + Math.random() * 22, s: (24 + Math.random() * 30) * (0.55 + v * 0.7)});
     }
     g.globalCompositeOperation = "lighter";
     // resplandor de brasa pegado al borde
     if (FUEGO.brillo > 0.01){
-      // el anillo se prepara una vez por tamaño y luego solo se estampa
       if (!FUEGO.anillo || FUEGO.anillo.w !== W){
         const rc = document.createElement("canvas"); rc.width = rc.height = Math.round(W * 0.6); const q = rc.getContext("2d"), k = rc.width / W;
-        const gr = q.createRadialGradient(cx * k, cx * k, R * 0.93 * k, cx * k, cx * k, R * 1.22 * k);
-        gr.addColorStop(0, "rgba(255,150,30,.55)"); gr.addColorStop(.35, "rgba(230,70,10,.35)"); gr.addColorStop(1, "rgba(120,10,0,0)");
+        const gr = q.createRadialGradient(cx * k, cx * k, R * 0.86 * k, cx * k, cx * k, R * 1.22 * k);
+        gr.addColorStop(0, "rgba(255,120,20,0)"); gr.addColorStop(.25, "rgba(255,150,30,.5)"); gr.addColorStop(.5, "rgba(230,70,10,.3)"); gr.addColorStop(1, "rgba(120,10,0,0)");
         q.fillStyle = gr; q.fillRect(0, 0, rc.width, rc.height); FUEGO.anillo = {w: W, c: rc};
       }
       g.globalAlpha = FUEGO.brillo; g.drawImage(FUEGO.anillo.c, 0, 0, W, W);
     }
-    const ps = FUEGO.parts;
+    const ps = FUEGO.parts, dir = wv >= 0 ? 1 : -1;
     for (let i = ps.length - 1; i >= 0; i--){
       const p = ps[i]; p.t++;
       if (p.t >= p.vida){ ps[i] = ps[ps.length - 1]; ps.pop(); continue; }
-      const k = p.t / p.vida; p.x += p.vx + (Math.random() - .5) * 0.6; p.y += p.vy; p.vy -= 0.05; p.vx *= 0.97;
-      const z = p.s * (1 - k * 0.65);
-      g.globalAlpha = (1 - k) * (k < 0.12 ? k / 0.12 : 1) * 0.5;
-      g.drawImage(FUEGO.spr, p.x - z / 2, p.y - z * 1.15, z, z * 2);
+      const k = p.t / p.vida;
+      // gira con la rueda (algo más lento) y se aleja del borde; además sube un poco, como el fuego de verdad
+      const dth = wv * p.lag; p.th += dth; p.rho += p.vr * (1 - k * 0.5); p.up += 0.06;
+      const ca = Math.cos(p.th - Math.PI / 2), sa = Math.sin(p.th - Math.PI / 2);
+      const x = cx + ca * p.rho, y = cx + sa * p.rho - p.up * p.t * 0.5;
+      // dirección del movimiento: tangente (según el giro) + hacia afuera + hacia arriba → la llama apunta hacia atrás del giro
+      const tx = -sa * dth * p.rho, ty = ca * dth * p.rho, mx = -tx * 0.9 + ca * p.vr, my = -ty * 0.9 + sa * p.vr - 0.8;
+      const ang = Math.atan2(mx, -my);   // 0 = hacia arriba
+      const idx = ((Math.round(ang / (Math.PI * 2) * FUEGO_ANG) % FUEGO_ANG) + FUEGO_ANG) % FUEGO_ANG;
+      const z = p.s * (1 - k * 0.6);
+      g.globalAlpha = (1 - k) * (k < 0.12 ? k / 0.12 : 1) * 0.55;
+      g.drawImage(FUEGO.spr[idx], x - z, y - z, z * 2, z * 2);
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
     if (FUEGO.on || ps.length || FUEGO.brillo > 0.01) FUEGO.raf = requestAnimationFrame(fuegoCuadro);
     else { FUEGO.raf = 0; g.clearRect(0, 0, W, W); }
+  }
+  // El dragón de la cafetería se asoma por detrás de la ruleta cuando sale el ganador
+  function dragonAsoma(){
+    const box = document.querySelector(".wheel-box"); if (!box) return;
+    let d = box.querySelector(".dragon-asoma");
+    if (!d){ d = document.createElement("img"); d.className = "dragon-asoma"; d.src = "logo-256.png"; d.alt = ""; d.setAttribute("aria-hidden", "true"); box.insertBefore(d, box.firstChild); }
+    if (!d.animate) return;
+    d.getAnimations().forEach(a => a.cancel());
+    d.animate([
+      {transform: "translate(-40%,45%) rotate(-20deg)", opacity: 0, offset: 0},
+      {transform: "translate(-40%,45%) rotate(-20deg)", opacity: 1, offset: 0.05},
+      {transform: "translate(4%,-30%) rotate(10deg)", offset: 0.17},
+      {transform: "translate(2%,-26%) rotate(4deg)", offset: 0.25},
+      {transform: "translate(4%,-30%) rotate(12deg)", offset: 0.33},
+      {transform: "translate(3%,-28%) rotate(8deg)", offset: 0.78},
+      {transform: "translate(-40%,45%) rotate(-20deg)", opacity: 1, offset: 0.95},
+      {transform: "translate(-40%,45%) rotate(-20deg)", opacity: 0, offset: 1}
+    ], {duration: 4200, easing: "cubic-bezier(.3,.7,.3,1)"});
   }
   function fuego(on){ FUEGO.on = on; if (on) FUEGO.size = 0; if (!FUEGO.raf) FUEGO.raf = requestAnimationFrame(fuegoCuadro); }
   // ---------- Efectos de la ruleta: sonido, puntero, confeti ----------
@@ -3070,7 +3100,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       else if (t < WIND + MAIN){ const x = (t - WIND) / MAIN; rot = (start - back) + (end + over - (start - back)) * easeOut(x); fase = 1; }
       else if (t < WIND + MAIN + SETTLE){ const x = (t - WIND - MAIN) / SETTLE; rot = end + over - over * easeInOut(x); fase = 2; }
       else { rot = end; fase = 3; }
-      FUEGO.vel = Math.abs(rot - (FUEGO.ult == null ? rot : FUEGO.ult)) / 0.25; FUEGO.ult = rot;
+      FUEGO.w = rot - (FUEGO.ult == null ? rot : FUEGO.ult); FUEGO.vel = Math.abs(FUEGO.w) / 0.25; FUEGO.ult = rot;
       wheelRot = rot; drawWheel(list, null, W);
       const cur = bajo(rot);
       if (cur !== prev && fase > 0){ prev = cur; const lento = fase === 2 || (t - WIND) / MAIN > 0.7; ruletaTick(lento); golpePuntero(); }
@@ -3081,7 +3111,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         spinning = null; seenSpin = sp.id; showWinner = sp.winner; wheelRot = wheelRot % TWO;
         if (renderPend) setTimeout(() => { if (renderPend) render(); }, 50);
         holding = {list, winner: sp.winner, w: W};
-        fanfarria(); confeti();
+        fanfarria(); confeti(); dragonAsoma();
         // el segmento ganador parpadea
         let k = 0; const blink = setInterval(() => { drawWheel(list, k++ % 2 ? null : sp.winner, W); if (k > 7){ clearInterval(blink); drawWheel(list, sp.winner, W); } }, 220);
         renderSorteo();
