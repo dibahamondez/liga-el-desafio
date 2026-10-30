@@ -705,6 +705,11 @@ body.portal #sampleBanner{display:none!important}
 .wheel-box::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--red),0 18px 60px rgba(0,0,0,.6)}
 .wheel-box::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .4s;box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--gold),0 0 50px rgba(233,180,76,.45)}
 .wheel-box.girando::after{opacity:1}
+/* Fuego alrededor de la ruleta mientras gira: capa detrás de la rueda, más grande que ella */
+#fuego{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;z-index:0}
+#wheel{position:relative;z-index:1}
+.wheel-box .hub{z-index:3}
+.wheel-box .pointer{z-index:4}
 .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:34px solid var(--gold);filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))}
 .hub img{width:86%;height:86%;object-fit:contain}
 .hub{position:absolute;inset:0;margin:auto;width:22%;height:22%;border-radius:50%;background:var(--bg);border:3px solid var(--gold);display:grid;place-items:center;text-align:center;font-family:var(--f-display);font-weight:900;font-size:clamp(10px,2.2vw,15px);line-height:1.05;text-transform:uppercase;color:var(--fg)}
@@ -1131,6 +1136,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     <div class="sorteo-grid">
       <div class="wheel-wrap">
         <div class="wheel-box">
+          <canvas id="fuego" aria-hidden="true"></canvas>
           <canvas id="wheel" aria-label="Ruleta del sorteo" role="img"></canvas>
           <div class="pointer" aria-hidden="true"></div>
           <div class="hub" aria-hidden="true"><img src="logo-256.png" alt=""></div>
@@ -2796,6 +2802,62 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, size, size);
     g.save(); g.translate(r, r); g.rotate(list.length ? wheelRot : 0); g.drawImage(wheelCache.cv, -r, -r, size, size); g.restore();
   }
+  // ---------- Fuego alrededor de la ruleta mientras gira ----------
+  // Partículas que nacen en el borde y salen hacia afuera y hacia arriba; más fuego mientras más rápido gira.
+  // Se dibujan con una imagen de llama ya preparada y mezcla aditiva (barato aunque sean muchas).
+  const FUEGO = {parts: [], vel: 0, on: false, raf: 0, spr: null, size: 0, brillo: 0};
+  function fuegoSprite(){
+    // lengua de fuego ya alargada (más alta que ancha): así no hay que girarla al dibujar
+    const c = document.createElement("canvas"); c.width = 48; c.height = 96; const g = c.getContext("2d");
+    g.setTransform(1, 0, 0, 2, 0, 0);
+    const gr = g.createRadialGradient(24, 28, 0, 24, 28, 24);
+    gr.addColorStop(0, "rgba(255,240,180,1)"); gr.addColorStop(.25, "rgba(255,170,40,.9)"); gr.addColorStop(.55, "rgba(230,70,10,.45)"); gr.addColorStop(1, "rgba(160,20,0,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 48, 48); return c;
+  }
+  function fuegoCuadro(){
+    const c = $("fuego"); if (!c){ FUEGO.raf = 0; return; }
+    if (!FUEGO.spr) FUEGO.spr = fuegoSprite();
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    if (!FUEGO.size || !FUEGO.on) FUEGO.size = Math.round(c.getBoundingClientRect().width) || FUEGO.size;
+    const W = FUEGO.size; if (!W){ FUEGO.raf = requestAnimationFrame(fuegoCuadro); return; }
+    if (c.width !== Math.round(W * dpr)){ c.width = c.height = Math.round(W * dpr); }
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, W);
+    const cx = W / 2, R = W / 2 / 1.32;   // radio de la rueda dentro de la capa
+    // nuevas llamas según la velocidad del giro
+    const v = FUEGO.on ? Math.min(1, FUEGO.vel) : 0;
+    FUEGO.brillo += ((FUEGO.on ? 0.35 + v * 0.65 : 0) - FUEGO.brillo) * 0.08;
+    const nuevas = FUEGO.on ? Math.round(3 + v * 7) : 0;
+    for (let k = 0; k < nuevas && FUEGO.parts.length < 220; k++){
+      const a = Math.random() * Math.PI * 2, sp = (0.25 + Math.random() * 0.8) * (0.5 + v);
+      FUEGO.parts.push({x: cx + Math.cos(a) * (R - 8), y: cx + Math.sin(a) * (R - 8), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (0.5 + Math.random() * 0.9),
+        t: 0, vida: 18 + Math.random() * 24, s: (26 + Math.random() * 34) * (0.55 + v * 0.7)});
+    }
+    g.globalCompositeOperation = "lighter";
+    // resplandor de brasa pegado al borde
+    if (FUEGO.brillo > 0.01){
+      // el anillo se prepara una vez por tamaño y luego solo se estampa
+      if (!FUEGO.anillo || FUEGO.anillo.w !== W){
+        const rc = document.createElement("canvas"); rc.width = rc.height = Math.round(W * 0.6); const q = rc.getContext("2d"), k = rc.width / W;
+        const gr = q.createRadialGradient(cx * k, cx * k, R * 0.93 * k, cx * k, cx * k, R * 1.22 * k);
+        gr.addColorStop(0, "rgba(255,150,30,.55)"); gr.addColorStop(.35, "rgba(230,70,10,.35)"); gr.addColorStop(1, "rgba(120,10,0,0)");
+        q.fillStyle = gr; q.fillRect(0, 0, rc.width, rc.height); FUEGO.anillo = {w: W, c: rc};
+      }
+      g.globalAlpha = FUEGO.brillo; g.drawImage(FUEGO.anillo.c, 0, 0, W, W);
+    }
+    const ps = FUEGO.parts;
+    for (let i = ps.length - 1; i >= 0; i--){
+      const p = ps[i]; p.t++;
+      if (p.t >= p.vida){ ps[i] = ps[ps.length - 1]; ps.pop(); continue; }
+      const k = p.t / p.vida; p.x += p.vx + (Math.random() - .5) * 0.6; p.y += p.vy; p.vy -= 0.05; p.vx *= 0.97;
+      const z = p.s * (1 - k * 0.65);
+      g.globalAlpha = (1 - k) * (k < 0.12 ? k / 0.12 : 1) * 0.5;
+      g.drawImage(FUEGO.spr, p.x - z / 2, p.y - z * 1.15, z, z * 2);
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+    if (FUEGO.on || ps.length || FUEGO.brillo > 0.01) FUEGO.raf = requestAnimationFrame(fuegoCuadro);
+    else { FUEGO.raf = 0; g.clearRect(0, 0, W, W); }
+  }
+  function fuego(on){ FUEGO.on = on; if (on) FUEGO.size = 0; if (!FUEGO.raf) FUEGO.raf = requestAnimationFrame(fuegoCuadro); }
   // ---------- Efectos de la ruleta: sonido, puntero, confeti ----------
   let ruletaAudio = null;
   const sonidoOn = () => true;   // la ruleta siempre suena
@@ -2997,7 +3059,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const t0 = performance.now();
     spinning = {list, winner: sp.winner};
     $("winnerCard").hidden = true; $("btnSpin").disabled = true; $("spinMsg").textContent = "Preparando…";
-    document.querySelector(".wheel-box").classList.add("girando");
+    document.querySelector(".wheel-box").classList.add("girando"); fuego(true);
     const easeOut = x => 1 - Math.pow(1 - x, 5), easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
     const bajo = rot => { const a = ((-rot % TWO) + TWO) % TWO; let k = 0; while (k < n - 1 && G.a0[k + 1] <= a) k++; return k; };
     let prev = bajo(start), msgPrev = ""; const msgEl = $("spinMsg");
@@ -3008,13 +3070,14 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       else if (t < WIND + MAIN){ const x = (t - WIND) / MAIN; rot = (start - back) + (end + over - (start - back)) * easeOut(x); fase = 1; }
       else if (t < WIND + MAIN + SETTLE){ const x = (t - WIND - MAIN) / SETTLE; rot = end + over - over * easeInOut(x); fase = 2; }
       else { rot = end; fase = 3; }
+      FUEGO.vel = Math.abs(rot - (FUEGO.ult == null ? rot : FUEGO.ult)) / 0.25; FUEGO.ult = rot;
       wheelRot = rot; drawWheel(list, null, W);
       const cur = bajo(rot);
       if (cur !== prev && fase > 0){ prev = cur; const lento = fase === 2 || (t - WIND) / MAIN > 0.7; ruletaTick(lento); golpePuntero(); }
       if (fase === 1 || fase === 2){ const txt = shortName(list[cur]) + (fase === 2 || (t - WIND) / MAIN > 0.85 ? "…" : ""); if (txt !== msgPrev){ msgPrev = txt; msgEl.textContent = txt; } }
       if (fase < 3) requestAnimationFrame(frame);
       else {
-        document.querySelector(".wheel-box").classList.remove("girando");
+        document.querySelector(".wheel-box").classList.remove("girando"); fuego(false); FUEGO.ult = null;
         spinning = null; seenSpin = sp.id; showWinner = sp.winner; wheelRot = wheelRot % TWO;
         if (renderPend) setTimeout(() => { if (renderPend) render(); }, 50);
         holding = {list, winner: sp.winner, w: W};
