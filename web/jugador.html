@@ -912,6 +912,15 @@ body.display .hdr-right{display:none}
 .fd-tbl td,.fd-tbl th{white-space:nowrap}
 .fd-mazo{min-width:150px;max-width:280px;white-space:normal!important;font-size:13px}
 .fd-sub{display:block;color:var(--muted);font-size:11px}
+.fd-jrow{cursor:pointer}
+.fd-jrow:hover td,.fd-jrow.sel td{background:var(--surface-2)}
+.fd-edit>td{padding:6px 8px 12px!important;background:var(--surface-2);white-space:normal!important;text-align:left}
+.fd-form{display:flex;flex-direction:column;gap:10px;position:sticky;left:8px;max-width:min(560px,calc(100vw - 140px))}
+.fd-ft{font-size:14px}
+.fd-fields{display:flex;flex-wrap:wrap;gap:8px}
+.fd-f{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.fd-mot input{max-width:420px}
+.fd-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .fd-extra{margin:8px 0 0;font-size:13px;color:var(--muted)}
 .fd-extra b{color:var(--text,#eee)}
 .ev-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -2146,10 +2155,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     hist[id] = Object.assign({id}, doc);
     editDeckMsg = {t:"Guardado ✓", ok:true}; renderStats();
   }
-  async function saveStatsEdit(id, tr){
+  async function saveStatsEdit(id, tr, clave){
     if (!M.admin || !hist[id]) return;
-    const doc = JSON.parse(JSON.stringify(hist[id]));
-    const j = (doc.jugadores || []).find(j => fold(j.nombre).trim() === editPlayer); if (!j) return;
+    const doc = JSON.parse(JSON.stringify(hist[id])), quien = clave || editPlayer;
+    const j = (doc.jugadores || []).find(j => fold(j.nombre).trim() === quien); if (!j) return;
     const get = f => tr.querySelector(`[data-ef="${f}"]`);
     const vals = {}; let bad = "";
     [["pts", -20, 60], ["w", 0, 8], ["kills", 0, 40], ["s", 0, 8], ["pj", 0, 8], ["neg", 0, 40]].forEach(([f, lo, hi]) => { const v = parseInt(get(f).value, 10); if (isNaN(v) || v < lo || v > hi) bad = bad || `Revisa el valor de ${f === "pts" ? "puntos" : f === "w" ? "victorias" : f === "kills" ? "kills" : f === "s" ? "sobrevivió" : f === "neg" ? "puntos negativos" : "partidas"}.`; vals[f] = v; });
@@ -2167,6 +2176,19 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   // Detalle de una fecha guardada (solo organizadores): posiciones, mazo/comandante, puntos y kills de cada jugador
   let fechaDet = null;
+  let fdEdit = null;
+  function fdEditHTML(e, j){
+    const enVivo = e.enCurso || e.id === "actual" || e.id === (S && (currentEvent() || {}).id);
+    if (enVivo) return `<tr class="fd-edit"><td colspan="10"><span class="note">Esta fecha está en curso: corrige el resultado en su mesa, en “Liga en vivo”.</span></td></tr>`;
+    const num = (f, lbl, v, max) => `<label class="fd-f"><span>${lbl}</span><input type="number" inputmode="numeric" data-ef="${f}" value="${v}" min="${f === "pts" ? -20 : 0}" max="${max}"></label>`;
+    const m = editMsg[e.id];
+    return `<tr class="fd-edit"><td colspan="10"><div class="fd-form edit-tbl">
+      <b class="fd-ft">Corregir a ${esc(j.nombre)} · ${fmtDate(e.fecha)}</b>
+      <div class="fd-fields">${num("pts", "Pts", j.pts, 60)}${num("w", "V", j.w, 8)}${num("kills", "K", j.kills, 40)}${num("s", "S", j.s || 0, 8)}${num("pj", "PJ", j.pj, 8)}${num("neg", "Neg", j.neg || 0, 40)}</div>
+      <label class="fd-f fd-mot"><span>Motivo (opcional)</span><input type="text" data-ef="motivo" maxlength="80" placeholder="Ej.: mal reporte mesa 3"></label>
+      <div class="fd-acts"><button class="btn primary" type="button" data-fd-save>Guardar</button><button class="btn ghost" type="button" data-fd-cancel>Cancelar</button><span class="${m && m.ok ? "ok-t" : "err"}" style="font-size:13px">${m ? esc(m.t) : ""}</span></div>
+      <p class="note" style="margin:0">Neg es solo informativo: los Pts que escribas son los que cuentan (ya con el descuento).</p></div></td></tr>`;
+  }
   function fechaDetHTML(e, evsAll){
     const js = (e.jugadores || []).slice().sort((a, b) => b.pts - a.pts || b.kills - a.kills || (b.buch || 0) - (a.buch || 0) || b.w - a.w || a.nombre.localeCompare(b.nombre));
     const fn = fechaInfo(e, evsAll);
@@ -2180,7 +2202,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const ed = (e.editado || []).length ? `<p class="fd-extra"><b>Correcciones:</b> ${e.editado.length} (${[...new Set(e.editado.map(x => x.nombre))].map(esc).join(", ")})</p>` : "";
     return `<div class="fd-box"><div class="fd-head"><b>${fn.extra ? "Fecha extra (no suma)" : "Fecha " + fn.n + " de " + fn.total}</b> · ${fmtDate(e.fecha)} · ${js.length} jugadores · ${e.rondas || "?"} rondas</div>
       <div class="stand-scroll"><table class="fd-tbl"><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th class="l">${B3 ? "Comandante" : "Mazo"}</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Sobrevivencias: partidas en que llegó vivo al final sin ganar" tabindex="0">S</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="ayuda" title="Puntos negativos (ya descontados de los Pts)" tabindex="0">Neg</th><th class="buch ayuda" title="Buchholz: suma de los puntos de los rivales enfrentados" tabindex="0">Buch</th></tr></thead>
-      <tbody>${js.map((j, i) => `<tr><td class="pos">${i + 1}</td><td class="l"><b>${esc(j.nombre)}</b>${j.tarde ? ' <span class="tag">Llegó tarde</span>' : ""}</td><td class="l fd-mazo">${mazo(j)}</td><td class="pts">${j.pts}</td><td>${j.w}</td><td>${j.kills}</td><td>${j.s || 0}</td><td>${j.pj}</td><td>${j.neg ? '<span class="pen">−' + j.neg + "</span>" : "0"}</td><td class="buch">${j.buch != null ? j.buch : "–"}</td></tr>`).join("")}</tbody></table></div>${sorteo}${ed}</div>`;
+      <tbody>${js.map((j, i) => { const cl = fold(j.nombre).trim(), abierta = fdEdit && fdEdit.id === e.id && fdEdit.clave === cl;
+        return `<tr class="fd-jrow${abierta ? " sel" : ""}" data-fd-j="${esc(cl)}" data-fd-ev="${esc(e.id)}" title="Corregir los puntos de ${esc(j.nombre)} en esta fecha"><td class="pos">${i + 1}</td><td class="l"><b>${esc(j.nombre)}</b>${j.tarde ? ' <span class="tag">Llegó tarde</span>' : ""}</td><td class="l fd-mazo">${mazo(j)}</td><td class="pts">${j.pts}</td><td>${j.w}</td><td>${j.kills}</td><td>${j.s || 0}</td><td>${j.pj}</td><td>${j.neg ? '<span class="pen">−' + j.neg + "</span>" : "0"}</td><td class="buch">${j.buch != null ? j.buch : "–"}</td></tr>${abierta ? fdEditHTML(e, j) : ""}`; }).join("")}</tbody></table></div>
+      <p class="note" style="margin:8px 0 0">${e.enCurso || e.id === "actual" || e.id === (S && (currentEvent() || {}).id) ? "Esta fecha está en curso: los resultados se corrigen en su mesa, en “Liga en vivo”." : "Toca un jugador para corregir sus números en esta fecha."}</p>${sorteo}${ed}</div>`;
   }
   function adminResumenHTML(evsAll, mes){
     const list = (mes === "all" ? evsAll : evsAll.filter(e => mesDe(e) === mes)).slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -3078,8 +3102,14 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   $("stats").addEventListener("click", e => {
     if (ADMUI()){
       if (e.target.closest("[data-edit-close]")){ editPlayer = null; editMsg = {}; renderStats(); return; }
+      const fds = e.target.closest("[data-fd-save]");
+      if (fds && fdEdit){ document.activeElement.blur(); saveStatsEdit(fdEdit.id, fds.closest(".fd-form"), fdEdit.clave); return; }
+      if (e.target.closest("[data-fd-cancel]")){ fdEdit = null; editMsg = {}; renderStats(); return; }
+      if (e.target.closest(".fd-edit")) return;
+      const fdj = e.target.closest("[data-fd-j]");
+      if (fdj && !e.target.closest("th.ayuda")){ const n = {id:fdj.dataset.fdEv, clave:fdj.dataset.fdJ}; fdEdit = fdEdit && fdEdit.id === n.id && fdEdit.clave === n.clave ? null : n; editMsg = {}; renderStats(); return; }
       const fdr = e.target.closest("[data-fecha-det]");
-      if (fdr && !e.target.closest("th.ayuda")){ fechaDet = fechaDet === fdr.dataset.fechaDet ? null : fdr.dataset.fechaDet; renderStats(); return; }
+      if (fdr && !e.target.closest("th.ayuda")){ fechaDet = fechaDet === fdr.dataset.fechaDet ? null : fdr.dataset.fechaDet; fdEdit = null; editMsg = {}; renderStats(); return; }
       const sv = e.target.closest("[data-edit-save]"); if (sv){ saveStatsEdit(sv.dataset.editSave, sv.closest("tr")); return; }
       if (e.target.closest("[data-email-save]")){ document.activeElement.blur(); saveEmailEdit(); return; }
       if (e.target.closest("[data-deck-hist-save]")){ document.activeElement.blur(); saveDeckHistEdit(); return; }
