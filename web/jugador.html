@@ -445,6 +445,21 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* Sorteo final de la liga */
+#sorteoModo button[aria-pressed=true]{background:var(--red);color:#fff}
+.ff-fecha{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--surface-2)}
+.ff-fecha>summary{cursor:pointer;padding:9px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:14px;list-style:none}
+.ff-fecha>summary::-webkit-details-marker{display:none}
+.ff-fecha>summary::before{content:"▸";color:var(--gold);margin-right:2px}
+.ff-fecha[open]>summary::before{content:"▾"}
+.ff-n{margin-left:auto;font-size:12px;color:var(--muted)}
+.ff-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
+.ff-c{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer;text-decoration:line-through;text-decoration-color:rgba(255,255,255,.3)}
+.ff-c.on{background:rgba(233,180,76,.14);border-color:var(--gold);color:var(--fg);text-decoration:none}
+.ff-c.fijo{opacity:.45;cursor:not-allowed}
+.ff-c:disabled{cursor:default}
+.ff-w{color:var(--gold)}
+.ff-v{color:var(--gold);font-size:11px;margin-left:3px}
 /* Ayuda de siglas en encabezados: mouse (title) o toque (globito) */
 th.ayuda{cursor:help;text-decoration:underline dotted rgba(255,255,255,.35);text-underline-offset:3px}
 .th-pop{position:fixed;z-index:200;max-width:240px;background:var(--surface);border:1px solid var(--gold);border-radius:10px;padding:8px 11px;font-size:13px;line-height:1.35;color:var(--text,#eee);box-shadow:0 10px 30px rgba(0,0,0,.55);text-transform:none;letter-spacing:0;font-family:inherit;pointer-events:none;animation:popIn .15s ease}
@@ -685,7 +700,11 @@ body.portal #sampleBanner{display:none!important}
 .sorteo-side{display:flex;flex-direction:column;gap:14px;min-width:0}
 .wheel-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;min-width:0}
 .wheel-box{position:relative;width:min(100%,600px);aspect-ratio:1;max-width:100%}
-.wheel-box canvas{width:100%;height:100%;display:block;border-radius:50%;box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--red),0 18px 60px rgba(0,0,0,.6)}
+.wheel-box canvas{width:100%;height:100%;display:block;border-radius:50%;will-change:transform;transform:translateZ(0)}
+/* El borde y la sombra van en una capa aparte que no se repinta mientras la ruleta gira (antes trababa el giro en equipos lentos) */
+.wheel-box::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--red),0 18px 60px rgba(0,0,0,.6)}
+.wheel-box::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .4s;box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--gold),0 0 50px rgba(233,180,76,.45)}
+.wheel-box.girando::after{opacity:1}
 .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:34px solid var(--gold);filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))}
 .hub img{width:86%;height:86%;object-fit:contain}
 .hub{position:absolute;inset:0;margin:auto;width:22%;height:22%;border-radius:50%;background:var(--bg);border:3px solid var(--gold);display:grid;place-items:center;text-align:center;font-family:var(--f-display);font-weight:900;font-size:clamp(10px,2.2vw,15px);line-height:1.05;text-transform:uppercase;color:var(--fg)}
@@ -695,7 +714,6 @@ body.portal #sampleBanner{display:none!important}
 .pointer{transform-origin:50% 0;z-index:2}
 .pointer.hit{animation:hit .14s ease-out}
 @keyframes hit{0%{transform:translateX(-50%) rotate(0)}40%{transform:translateX(-50%) rotate(-14deg)}100%{transform:translateX(-50%) rotate(0)}}
-.wheel-box.girando canvas{box-shadow:0 0 0 6px var(--surface-2),0 0 0 8px var(--gold),0 0 50px rgba(233,180,76,.45),0 18px 60px rgba(0,0,0,.6);transition:box-shadow .4s}
 #spinMsg{font-family:var(--f-display);font-weight:800;font-size:clamp(18px,3vw,26px);text-transform:uppercase;letter-spacing:.04em;min-height:1.3em;color:var(--gold)}
 canvas.confeti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9999}
 @media (prefers-reduced-motion:reduce){.pointer.hit{animation:none}}
@@ -1108,7 +1126,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     </div>
   </section>
   <section id="sorteo" class="sorteo" hidden>
-    <div class="stats-head"><div><h2>Sorteo de la jornada</h2><div class="sub2" id="sorteoSub"></div></div></div>
+    <div class="stats-head"><div><h2 id="sorteoH">Sorteo de la jornada</h2><div class="sub2" id="sorteoSub"></div></div>
+      <div class="seg adm" id="sorteoModo" role="group" aria-label="Tipo de sorteo"><button type="button" data-smodo="hoy">Sorteo de hoy</button><button type="button" data-smodo="final">Sorteo final de la liga</button></div></div>
     <div class="sorteo-grid">
       <div class="wheel-wrap">
         <div class="wheel-box">
@@ -1909,7 +1928,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const done = S.rounds.length === S.cfg.rounds && S.rounds.every(r => r.tables.every(t => t.result));
     const ev = {id: S.archivedId || "actual", liga: LIGA_DATOS, mes: curMes(), fecha: (S.archivedId && hist[S.archivedId] && hist[S.archivedId].fecha) || S.fecha || lastSaturday(),
       enCurso: !done, ejemplo: !!S.sample, rondas: S.cfg.rounds,
-      jugadores: standings(S).map(x => { const d = deckOf(x.id); return {nombre:canon(x.name), k:d ? d.k || "" : "", ci:d ? ciFor(d.c, d.ci) : undefined, cmd:d ? (d.c || (DECK[d.k] && DECK[d.k].cmd) || "") : "", pts:x.pts, w:x.w, kills:x.k, s:x.s, pj:x.pj, buch:x.buch, neg:x.neg || undefined, drop:isDrop(x.id) || undefined, tarde:isLate(x.id) || undefined}; }),
+      jugadores: standings(S).map(x => { const d = deckOf(x.id); return {nombre:canon(x.name), k:d ? d.k || "" : "", ci:d ? ciFor(d.c, d.ci) : undefined, cmd:d ? (d.c || (DECK[d.k] && DECK[d.k].cmd) || "") : "", pts:x.pts, w:x.w, kills:x.k, s:x.s, pj:x.pj, buch:x.buch, neg:x.neg || undefined, wn:((S.warnings || {})[x.id] || 0) || undefined, drop:isDrop(x.id) || undefined, tarde:isLate(x.id) || undefined}; }),
       sorteo: ((S.sorteo && S.sorteo.ganadores) || []).map(pname)};
     // vs[rival] = [mesas juntos, mesas que ganó el rival, mesas que gané yo]
     const vsOf = {};
@@ -2198,7 +2217,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       const d = DECK[j.k];
       return `${ciTag(ci)} ${esc(d ? d.name : (j.k ? j.k.split("|")[1] : "–"))}${j.cmd ? `<small class="fd-sub">${esc(j.cmd)}</small>` : ""}`;
     };
-    const sorteo = (e.sorteo || []).length ? `<p class="fd-extra"><b>Premios del sorteo:</b> ${e.sorteo.map(esc).join(", ")}</p>` : "";
+    const sorteo = "";
     const ed = (e.editado || []).length ? `<p class="fd-extra"><b>Correcciones:</b> ${e.editado.length} (${[...new Set(e.editado.map(x => x.nombre))].map(esc).join(", ")})</p>` : "";
     return `<div class="fd-box"><div class="fd-head"><b>${fn.extra ? "Fecha extra (no suma)" : "Fecha " + fn.n + " de " + fn.total}</b> · ${fmtDate(e.fecha)} · ${js.length} jugadores · ${e.rondas || "?"} rondas</div>
       <div class="stand-scroll"><table class="fd-tbl"><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th class="l">${B3 ? "Comandante" : "Mazo"}</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Sobrevivencias: partidas en que llegó vivo al final sin ganar" tabindex="0">S</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="ayuda" title="Puntos negativos (ya descontados de los Pts)" tabindex="0">Neg</th><th class="buch ayuda" title="Buchholz: suma de los puntos de los rivales enfrentados" tabindex="0">Buch</th></tr></thead>
@@ -2219,7 +2238,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const fieles = Object.values(asist).filter(a => a.c === list.length).length;
     return `<div class="card"><h3>Resumen de la liga · Solo organizadores</h3><p class="card-sub">Asistencia y movimiento ${mes === "all" ? "de todo el histórico" : "de " + monthLabel(mes).toLowerCase()}. Los jugadores no ven esta sección.</p>
       <div class="summary"><span><b>${list.length}</b>${list.length === 1 ? "fecha" : "fechas"}</span><span><b>${unicos}</b>jugadores distintos</span><span><b>${prom}</b>promedio por fecha</span><span><b>${fieles}</b>vinieron a todas</span></div>
-      <div class="stand-scroll"><table><thead><tr><th class="l">Fecha</th><th>Jugadores</th><th>Nuevos</th><th>Mesas jugadas</th><th>Kills</th><th>Premios sorteo</th></tr></thead><tbody>${filas.map(f => `<tr class="fd-row${fechaDet === f.e.id ? " sel" : ""}" data-fecha-det="${esc(f.e.id)}" title="Ver los resultados de esta fecha"><td class="l"><span class="fd-chev" aria-hidden="true">${fechaDet === f.e.id ? "▾" : "▸"}</span> ${fmtDate(f.e.fecha)}${f.e.enCurso ? ' · <span class="tag">En curso</span>' : ""}</td><td>${f.n}</td><td>${f.nuevos}</td><td>${f.mesas}</td><td>${f.kills}</td><td>${f.sorteo}</td></tr>`).join("")}</tbody></table></div>
+      <div class="stand-scroll"><table><thead><tr><th class="l">Fecha</th><th>Jugadores</th><th>Nuevos</th><th>Mesas jugadas</th><th>Kills</th></tr></thead><tbody>${filas.map(f => `<tr class="fd-row${fechaDet === f.e.id ? " sel" : ""}" data-fecha-det="${esc(f.e.id)}" title="Ver los resultados de esta fecha"><td class="l"><span class="fd-chev" aria-hidden="true">${fechaDet === f.e.id ? "▾" : "▸"}</span> ${fmtDate(f.e.fecha)}${f.e.enCurso ? ' · <span class="tag">En curso</span>' : ""}</td><td>${f.n}</td><td>${f.nuevos}</td><td>${f.mesas}</td><td>${f.kills}</td></tr>`).join("")}</tbody></table></div>
       ${(f => f ? fechaDetHTML(f.e, evsAll) : "")(filas.find(f => f.e.id === fechaDet))}
       <p class="note" style="margin:8px 0 0">Toca una fecha para ver sus resultados: posiciones, comandantes, puntos y kills de cada jugador.</p></div>`;
   }
@@ -2667,7 +2686,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
 
   /* ---------- Sorteo: ruleta con los inscritos fuera del top 4 ---------- */
   let wheelRot = 0, spinning = null, seenSpin = null, showWinner = null, holding = null;
-  const shortName = id => { const p = S && S.players.find(x => x.id === id); if (!p) return "?"; const f = p.first || p.name.split(" ")[0], l = p.last || p.name.split(" ").slice(1).join(" "); return f + (l ? " " + l.charAt(0) + "." : ""); };
+  const esN = id => typeof id === "string" && id.startsWith("n:");
+  const snm = id => esN(id) ? id.slice(2) : pname(id);
+  const shortName = id => { const p = esN(id) ? {name:id.slice(2)} : S && S.players.find(x => x.id === id); if (!p) return "?"; const f = p.first || p.name.split(" ")[0], l = p.last || p.name.split(" ").slice(1).join(" "); return f + (l ? " " + l.charAt(0) + "." : ""); };
   // Filtros del sorteo (se combinan: el jugador tiene que cumplir todos los marcados)
   // g: "sacar" (saca a un grupo) o "solo" (deja solo a un grupo)
   const FILTROS = [
@@ -2732,30 +2753,48 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const pool = libres.filter(p => activos.every(x => test[x.k](p.id))).sort((a, b) => a.name.localeCompare(b.name)).map(p => p.id);
     return {pool, top, gan, st, f, activos, counts, libres:libres.length, fijos, why: (S.sorteo && S.sorteo.motivo) || {}};
   }
-  function drawWheel(list, hi){
-    const c = $("wheel"); if (!c) return;
-    const box = c.parentElement.getBoundingClientRect(), size = Math.max(200, Math.round(box.width)), dpr = window.devicePixelRatio || 1;
-    if (c.width !== size * dpr){ c.width = size * dpr; c.height = size * dpr; }
-    const g = c.getContext("2d"), r = size / 2, css = getComputedStyle(document.documentElement);
+  // Ángulos de cada gajo: iguales, o proporcionales a los votos (w) en el sorteo final
+  const gajos = (n, w) => { const TWO = Math.PI * 2, W = w && w.length === n ? w : null, tot = W ? W.reduce((a, b) => a + b, 0) || 1 : n;
+    const a0 = [], sz = []; let acc = 0; for (let i = 0; i < n; i++){ a0.push(acc); const z = (W ? W[i] : 1) / tot * TWO; sz.push(z); acc += z; } return {a0, sz}; };
+  // La rueda se pinta una sola vez en una imagen aparte (nombres, colores) y en cada cuadro solo se gira esa imagen:
+  // así el giro es fluido aunque haya muchos jugadores o el equipo sea lento.
+  let wheelCache = null, wheelSize = 0;
+  function pintarRueda(list, hi, w, size, dpr){
+    const cv = document.createElement("canvas"); cv.width = cv.height = Math.round(size * dpr);
+    const g = cv.getContext("2d"), r = size / 2, css = getComputedStyle(document.documentElement);
     const col = n => css.getPropertyValue(n).trim();
     const fills = [col("--red"), "#3a1410", "#6e1607", col("--surface-2")];
-    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, size, size);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const n = list.length;
     if (!n){ g.fillStyle = col("--surface"); g.beginPath(); g.arc(r, r, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = col("--muted"); g.font = "600 16px " + col("--f-body"); g.textAlign = "center"; g.fillText("Sin participantes", r, r * 0.55); return; }
-    const seg = Math.PI * 2 / n;
+      g.fillStyle = col("--muted"); g.font = "600 16px " + col("--f-body"); g.textAlign = "center"; g.fillText("Sin participantes", r, r * 0.55); return cv; }
+    const G = gajos(n, w), bg = col("--bg"), gold = col("--gold"), red = col("--red"), fd = col("--f-display");
     for (let i = 0; i < n; i++){
-      const a0 = wheelRot + i * seg - Math.PI / 2;
+      const seg = G.sz[i], a0 = G.a0[i] - Math.PI / 2;
       g.beginPath(); g.moveTo(r, r); g.arc(r, r, r - 1, a0, a0 + seg); g.closePath();
-      g.fillStyle = list[i] === hi ? col("--gold") : n === 1 ? col("--red") : fills[i % (n % 4 === 1 ? 3 : 4)]; g.fill();
-      g.strokeStyle = col("--bg"); g.lineWidth = 2; g.stroke();
+      g.fillStyle = list[i] === hi ? gold : n === 1 ? red : fills[i % (n % 4 === 1 ? 3 : 4)]; g.fill();
+      g.strokeStyle = bg; g.lineWidth = 2; g.stroke();
+      if (seg * r < 9) continue;   // gajo muy angosto: sin nombre
       g.save(); g.translate(r, r); g.rotate(a0 + seg / 2);
       const fs = Math.max(10, Math.min(18, Math.floor(seg * r * 0.55)));
-      g.font = `700 ${fs}px ${col("--f-display")}`; g.textAlign = "right"; g.textBaseline = "middle";
-      g.fillStyle = list[i] === hi ? "#1a0d0b" : (i % 4 === 3) ? col("--gold") : "#fff";
+      g.font = `700 ${fs}px ${fd}`; g.textAlign = "right"; g.textBaseline = "middle";
+      g.fillStyle = list[i] === hi ? "#1a0d0b" : (i % 4 === 3) ? gold : "#fff";
       let t = shortName(list[i]); while (g.measureText(t).width > r * 0.68 && t.length > 3) t = t.slice(0, -2) + "…";
       g.fillText(t, r - 16, 0); g.restore();
     }
+    return cv;
+  }
+  function drawWheel(list, hi, w){
+    const c = $("wheel"); if (!c) return;
+    // el tamaño se mide solo cuando la ruleta no está girando (medir en cada cuadro fuerza a recalcular la página)
+    if (!spinning || !wheelSize) wheelSize = Math.max(200, Math.round(c.parentElement.getBoundingClientRect().width));
+    const size = wheelSize, dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(size * dpr)){ c.width = c.height = Math.round(size * dpr); }
+    const key = size + "|" + dpr + "|" + list.join("\u0001") + "|" + (w || []).join(",") + "|" + (hi || "");
+    if (!wheelCache || wheelCache.key !== key) wheelCache = {key, cv: pintarRueda(list, hi, w, size, dpr)};
+    const g = c.getContext("2d"), r = size / 2;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, size, size);
+    g.save(); g.translate(r, r); g.rotate(list.length ? wheelRot : 0); g.drawImage(wheelCache.cv, -r, -r, size, size); g.restore();
   }
   // ---------- Efectos de la ruleta: sonido, puntero, confeti ----------
   let ruletaAudio = null;
@@ -2826,8 +2865,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     [523.25, 659.25, 783.99, 987.77].forEach(f => nota(f, t0 + 0.42, 1.6, 0.07, "triangle"));
   }
   function golpePuntero(){
-    const p = document.querySelector(".wheel-box .pointer"); if (!p) return;
-    p.classList.remove("hit"); void p.offsetWidth; p.classList.add("hit");
+    const p = document.querySelector(".wheel-box .pointer"); if (!p || !p.animate) return;
+    // animación sin forzar a recalcular la página en cada tic
+    p.animate([{transform:"translateX(-50%) rotate(0)"}, {transform:"translateX(-50%) rotate(-14deg)", offset:.4}, {transform:"translateX(-50%) rotate(0)"}], {duration:140, easing:"ease-out"});
   }
   function confeti(){
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -2940,11 +2980,11 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   document.addEventListener("click", e => { const el = e.target.closest(".sf-campeon, .sf-slot.campeon"); if (el && !e.target.closest("button")) challa(el); });
   // Giro con suspenso: amague hacia atrás, arranque fuerte, frenado largo, se pasa un poco y vuelve al ganador
   function animateSpin(sp){
-    const list = sp.list, n = list.length, i = list.indexOf(sp.winner);
+    const list = sp.list, n = list.length, i = list.indexOf(sp.winner), W = sp.w && sp.w.length === n ? sp.w : null;
     if (i < 0 || !n){ seenSpin = sp.id; renderSorteo(); return; }
-    const seg = Math.PI * 2 / n, TWO = Math.PI * 2;
+    const G = gajos(n, W), seg = G.sz[i], TWO = Math.PI * 2;
     const jitter = ((sp.j || 0.5) - 0.5) * seg * 0.7;
-    const target = -(i + 0.5) * seg + jitter;
+    const target = -(G.a0[i] + seg / 2) + jitter;
     // La ruleta es el espectáculo: gira completa aunque el equipo tenga activado "reducir animaciones"
     // (Windows sin efectos de animación, ahorro de batería), que antes la dejaba en 1,2 segundos.
     const reduce = false;
@@ -2952,15 +2992,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     let end = base + target; while (end < start) end += TWO;
     end += (reduce ? 1 : 9) * TWO;
     // "Se pasa y vuelve" ocurre solo a veces: lo decide el azar al girar (sp.ov) y es igual en todas las pantallas
-    const over = reduce ? 0 : seg * (sp.ov || 0);
+    const over = 0;   // ya no se pasa del ganador ni se devuelve: frena directo y fluido
     const WIND = reduce ? 0 : 750, MAIN = reduce ? 1200 : 11500, SETTLE = over ? 1300 : 0, back = 0.22;
     const t0 = performance.now();
     spinning = {list, winner: sp.winner};
     $("winnerCard").hidden = true; $("btnSpin").disabled = true; $("spinMsg").textContent = "Preparando…";
     document.querySelector(".wheel-box").classList.add("girando");
     const easeOut = x => 1 - Math.pow(1 - x, 5), easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-    const bajo = rot => { const a = ((-rot % TWO) + TWO) % TWO; return Math.floor(a / seg) % n; };
-    let prev = bajo(start);
+    const bajo = rot => { const a = ((-rot % TWO) + TWO) % TWO; let k = 0; while (k < n - 1 && G.a0[k + 1] <= a) k++; return k; };
+    let prev = bajo(start), msgPrev = ""; const msgEl = $("spinMsg");
     const frame = now => {
       const t = now - t0;
       let rot, fase;
@@ -2968,24 +3008,25 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       else if (t < WIND + MAIN){ const x = (t - WIND) / MAIN; rot = (start - back) + (end + over - (start - back)) * easeOut(x); fase = 1; }
       else if (t < WIND + MAIN + SETTLE){ const x = (t - WIND - MAIN) / SETTLE; rot = end + over - over * easeInOut(x); fase = 2; }
       else { rot = end; fase = 3; }
-      wheelRot = rot; drawWheel(list);
+      wheelRot = rot; drawWheel(list, null, W);
       const cur = bajo(rot);
       if (cur !== prev && fase > 0){ prev = cur; const lento = fase === 2 || (t - WIND) / MAIN > 0.7; ruletaTick(lento); golpePuntero(); }
-      if (fase === 1 || fase === 2) $("spinMsg").textContent = shortName(list[cur]) + (fase === 2 || (t - WIND) / MAIN > 0.85 ? "…" : "");
+      if (fase === 1 || fase === 2){ const txt = shortName(list[cur]) + (fase === 2 || (t - WIND) / MAIN > 0.85 ? "…" : ""); if (txt !== msgPrev){ msgPrev = txt; msgEl.textContent = txt; } }
       if (fase < 3) requestAnimationFrame(frame);
       else {
         document.querySelector(".wheel-box").classList.remove("girando");
         spinning = null; seenSpin = sp.id; showWinner = sp.winner; wheelRot = wheelRot % TWO;
-        holding = {list, winner: sp.winner};
+        if (renderPend) setTimeout(() => { if (renderPend) render(); }, 50);
+        holding = {list, winner: sp.winner, w: W};
         fanfarria(); confeti();
         // el segmento ganador parpadea
-        let k = 0; const blink = setInterval(() => { drawWheel(list, k++ % 2 ? null : sp.winner); if (k > 7){ clearInterval(blink); drawWheel(list, sp.winner); } }, 220);
+        let k = 0; const blink = setInterval(() => { drawWheel(list, k++ % 2 ? null : sp.winner, W); if (k > 7){ clearInterval(blink); drawWheel(list, sp.winner, W); } }, 220);
         renderSorteo();
         setTimeout(() => {
           holding = null;
           // al sacar al ganador, se gira levemente para que el puntero quede en el mismo lugar
           const rest = list.filter(id => id !== sp.winner);
-          if (rest.length) wheelRot = -((i * rest.length / n) + 0.5) * (Math.PI * 2 / rest.length);
+          if (rest.length && !W) wheelRot = -((i * rest.length / n) + 0.5) * (Math.PI * 2 / rest.length);
           renderSorteo();
         }, 6500);
       }
@@ -2994,6 +3035,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   function renderSorteo(){
     if (view !== "sorteo") return;
+    const mf = modoFinal();
+    document.querySelectorAll("#sorteoModo [data-smodo]").forEach(b => { b.setAttribute("aria-pressed", String((b.dataset.smodo === "final") === mf)); b.disabled = !!spinning || !!holding; });
+    $("sorteoH").textContent = mf ? "Sorteo final de la liga" : "Sorteo de la jornada";
+    if (mf) return renderSorteoFinal();
     const {pool, top, gan, st} = sorteoData();
     const sp = S && S.sorteo && S.sorteo.spin;
     if (sp && sp.id !== seenSpin && !spinning){
@@ -3045,6 +3090,98 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       wc.classList.toggle("con-arte", !!urls.length);
     } else if (!spinning) wc.hidden = true;
   }
+  // ---------- Sorteo final de la liga: 1 voto por cada fecha jugada en el mes ----------
+  // El organizador decide, fecha por fecha, quién suma su voto (por defecto no suman quienes tuvieron warnings o negativos
+  // esa fecha, ni la lista "Nunca entran a la ruleta"). La ruleta tiene gajos según los votos.
+  const modoFinal = () => !!(S && S.sorteoModo === "final");
+  const ffOpen = new Set();
+  function finalData(){
+    const mes = curMes(), todas = allEvents();
+    const fechas = todas.filter(e => !e.ejemplo && mesDe(e) === mes && !fechaInfo(e, todas).extra).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const F = (S && S.sorteoFinal) || {}, quitar = F.quitar || {}, poner = F.poner || {};
+    const votos = {}, nombres = {};
+    const fx = fechas.map((e, n) => {
+      const js = (e.jugadores || []).map(j => {
+        const nombre = canon(j.nombre), cl = claveNombre(nombre), fijo = enNoSorteo(nombre);
+        const auto = (j.wn || 0) > 0 ? "Tuvo warnings" : (j.neg || 0) > 0 ? "Tuvo puntos negativos" : "";
+        const incl = !fijo && (auto ? (poner[e.fecha] || []).includes(cl) : !(quitar[e.fecha] || []).includes(cl));
+        if (incl){ votos[cl] = (votos[cl] || 0) + 1; if (!nombres[cl] || nombres[cl] === nombres[cl].toLowerCase()) nombres[cl] = nombre; }
+        return {cl, nombre, incl, fijo, auto};
+      }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+      return {e, n: n + 1, js, si: js.filter(x => x.incl).length};
+    });
+    const gan = F.ganadores || [], ganCl = new Set(gan.map(id => claveNombre(snm(id))));
+    const pool = Object.keys(votos).filter(c => !ganCl.has(c)).sort((a, b) => nombres[a].localeCompare(nombres[b])).map(c => "n:" + nombres[c]);
+    const w = pool.map(id => votos[claveNombre(snm(id))]);
+    return {mes, fechas: fx, votos, pool, w, gan, total: w.reduce((a, b) => a + b, 0)};
+  }
+  function renderSorteoFinal(){
+    const d = finalData(), F = S.sorteoFinal || {};
+    const sp = F.spin;
+    if (sp && sp.id !== seenSpin && !spinning){
+      if (seenSpin === null && Date.now() - (sp.at || 0) > 20000){ seenSpin = sp.id; } else { animateSpin(sp); }
+    }
+    const animWinner = spinning ? spinning.winner : null, shownGan = d.gan.filter(id => id !== animWinner);
+    const lock = !ADMUI() || !!spinning || !!holding;
+    $("sorteoSub").textContent = !d.fechas.length ? "Todavía no hay fechas jugadas este mes." : `Liga de ${monthLabel(d.mes).toLowerCase()}: cada fecha jugada da 1 voto. Quien vino a más fechas tiene más opciones de ganar.`;
+    $("filtSub").innerHTML = `Toca un nombre para sacar o devolver su voto de esa fecha. Por defecto no suman quienes tuvieron warnings o puntos negativos esa fecha${noSorteo().length ? ", ni la lista “Nunca entran”" : ""}. En la ruleta: <b>${d.pool.length}</b> ${d.pool.length === 1 ? "jugador" : "jugadores"} con <b>${d.total}</b> ${d.total === 1 ? "voto" : "votos"}.`;
+    if (!typing($("filtBox"))) $("filtBox").innerHTML = d.fechas.map(f => `<details class="ff-fecha" data-ff-fecha="${esc(f.e.fecha)}" ${ffOpen.has(f.e.fecha) ? "open" : ""}><summary><b>Fecha ${f.n}</b> · ${fmtDate(f.e.fecha)}${f.e.enCurso ? ' <span class="tag">En curso</span>' : ""}<span class="ff-n">${f.si} de ${f.js.length} votos</span></summary>
+      <div class="ff-chips">${f.js.map(x => `<button type="button" class="ff-c${x.incl ? " on" : ""}${x.fijo ? " fijo" : ""}" data-ff="${esc(f.e.fecha)}|${esc(x.cl)}" ${lock || x.fijo ? "disabled" : ""} aria-pressed="${x.incl}" title="${x.fijo ? "Está en la lista “Nunca entran a la ruleta”" : x.auto ? x.auto + " esta fecha" + (x.incl ? " (lo devolviste a mano)" : "") : x.incl ? "Toca para sacar su voto de esta fecha" : "Toca para devolver su voto"}">${x.incl ? "✓ " : ""}${esc(x.nombre)}${x.auto ? ' <span class="ff-w">⚠</span>' : ""}</button>`).join("")}</div></details>`).join("") || '<p class="note" style="margin:0">Sin fechas este mes.</p>';
+    renderNoSorteo();
+    $("winList").innerHTML = shownGan.length ? shownGan.map((id, i) => `<li><span class="pos-n">${i + 1}°</span><span class="nm-wrap"><span class="nm">${esc(snm(id))}</span><span class="why">${(n => n + (n === 1 ? " voto" : " votos"))((d.votos[claveNombre(snm(id))] || 0))}</span></span></li>`).join("") : '<li style="display:block;color:var(--muted)">Todavía no hay ganadores.</li>';
+    const poolShown = spinning ? spinning.list : holding ? holding.list : d.pool;
+    $("poolTitle").textContent = `En la ruleta (${poolShown.length})`;
+    const canEdit = ADMUI() && !spinning && !holding;
+    $("poolChips").innerHTML = poolShown.map(id => { const v = d.votos[claveNombre(snm(id))] || 0, t = `${esc(snm(id))} <small class="ff-v">${v} ${v === 1 ? "voto" : "votos"}</small>`;
+      return canEdit ? `<span class="xc">${t}<button type="button" data-ffx="${esc(claveNombre(snm(id)))}" aria-label="Sacar a ${esc(snm(id))} de todas las fechas" title="Sacar de todas las fechas">×</button></span>` : `<span>${t}</span>`; }).join("") || '<span>Nadie</span>';
+    $("exclCard").hidden = true;
+    const canSpin = ADMUI() && !spinning && !holding && d.pool.length > 0;
+    $("btnSpin").hidden = !ADMUI(); $("btnSpin").disabled = !canSpin;
+    $("btnSpin").textContent = d.pool.length ? "Girar la ruleta" : "No quedan participantes";
+    if (!spinning){
+      $("spinMsg").textContent = holding ? `¡${snm(holding.winner)}!` : ADMUI() ? "" : "El organizador gira la ruleta desde su equipo.";
+      if (holding) drawWheel(holding.list, holding.winner, holding.w); else drawWheel(d.pool, null, d.w);
+    }
+    const wc = $("winnerCard");
+    if (!spinning && showWinner && d.gan.includes(showWinner)){
+      wc.hidden = false; wc.classList.remove("con-arte");
+      const v = d.votos[claveNombre(snm(showWinner))] || 0, clave = "f|" + showWinner;
+      if (wc.dataset.k !== clave){ wc.dataset.k = clave;
+        wc.innerHTML = `<div class="wc-body"><div class="eyebrow">Sorteo final · ${d.gan.indexOf(showWinner) + 1}° ganador</div><div class="wn">${esc(snm(showWinner))}</div><div class="cmd">${v} ${v === 1 ? "voto" : "votos"} en la ruleta</div></div>`; }
+    } else if (!spinning) wc.hidden = true;
+  }
+  function spinFinal(){
+    if (!M.admin || spinning) return;
+    const d = finalData(); if (!d.pool.length) return;
+    const rnd = new Uint32Array(4); crypto.getRandomValues(rnd);
+    let x = rnd[0] / 4294967296 * d.total, k = 0; while (k < d.pool.length - 1 && x >= d.w[k]){ x -= d.w[k]; k++; }
+    const winner = d.pool[k];
+    S.sorteoFinal = Object.assign({}, S.sorteoFinal || {}, {mes: d.mes, ganadores: d.gan.concat([winner]), spin: {id: "f" + Date.now().toString(36), winner, list: d.pool, w: d.w, at: Date.now(), j: rnd[1] / 4294967296,
+      ov: 0}});
+    commit();
+  }
+  function cambiarVotoFinal(fecha, cl){
+    const d = finalData(), f = d.fechas.find(x => x.e.fecha === fecha), j = f && f.js.find(x => x.cl === cl); if (!j || j.fijo) return;
+    const F = Object.assign({}, S.sorteoFinal || {}), lista = j.auto ? "poner" : "quitar";
+    const m = Object.assign({}, F[lista] || {}), arr = (m[fecha] || []).slice(), i = arr.indexOf(cl);
+    if (i >= 0) arr.splice(i, 1); else arr.push(cl);
+    m[fecha] = arr; F[lista] = m; S.sorteoFinal = F; commit();
+  }
+  function sacarDeTodasFinal(cl){
+    const d = finalData(), F = Object.assign({}, S.sorteoFinal || {}), q = Object.assign({}, F.quitar || {}), p = Object.assign({}, F.poner || {});
+    d.fechas.forEach(f => { const j = f.js.find(x => x.cl === cl); if (!j || !j.incl) return;
+      if (j.auto) p[f.e.fecha] = (p[f.e.fecha] || []).filter(x => x !== cl); else q[f.e.fecha] = (q[f.e.fecha] || []).concat([cl]); });
+    F.quitar = q; F.poner = p; S.sorteoFinal = F; commit();
+  }
+  document.addEventListener("click", e => {
+    const m = e.target.closest("[data-smodo]");
+    if (m && M.admin && S && !spinning && !holding){ const nv = m.dataset.smodo === "final" ? "final" : "hoy"; if ((S.sorteoModo || "hoy") !== nv){ S.sorteoModo = nv; showWinner = null; commit(); renderSorteo(); } return; }
+    const c = e.target.closest("[data-ff]");
+    if (c && M.admin && S && !spinning && !holding && modoFinal()){ const [f, cl] = c.dataset.ff.split("|"); cambiarVotoFinal(f, cl); return; }
+    const x = e.target.closest("[data-ffx]");
+    if (x && M.admin && S && !spinning && !holding && modoFinal()){ sacarDeTodasFinal(x.dataset.ffx); return; }
+  });
+  document.addEventListener("toggle", e => { const d = e.target; if (!d.matches || !d.matches(".ff-fecha")) return; if (d.open) ffOpen.add(d.dataset.ffFecha); else ffOpen.delete(d.dataset.ffFecha); }, true);
   function spin(){
     if (!M.admin || spinning) return;
     const {pool, gan, f, activos} = sorteoData(); if (!pool.length) return;
@@ -3053,15 +3190,14 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const motivo = Object.assign({}, (S.sorteo && S.sorteo.motivo) || {}, {[winner]: activos.length ? activos.map(x => x.t).join(" · ") : "Sorteo general"});
     // Se conserva lo demás del sorteo (por ejemplo, los que se sacaron de la ruleta)
     S.sorteo = Object.assign({}, S.sorteo || {}, {ganadores: gan.concat([winner]), filtros: f, motivo, spin: {id: "s" + Date.now().toString(36), winner, list: pool, at: Date.now(), j: rnd[1] / 4294967296,
-      // 20 % de las veces la ruleta se pasa del ganador (entre 0,3 y 0,7 de un gajo) y vuelve
-      ov: rnd[2] / 4294967296 < 0.2 ? +(0.3 + rnd[3] / 4294967296 * 0.4).toFixed(3) : 0}});
+      ov: 0}});
     commit();
   }
-  $("btnSpin").addEventListener("click", () => { audioCtx(); spin(); });
+  $("btnSpin").addEventListener("click", () => { audioCtx(); if (modoFinal()) spinFinal(); else spin(); });
 
   $("btnResetSorteo").addEventListener("click", () => $("confirmReset").hidden = false);
   $("btnResetNo").addEventListener("click", () => $("confirmReset").hidden = true);
-  $("btnResetYes").addEventListener("click", () => { $("confirmReset").hidden = true; showWinner = null; if (S){ S.sorteo = {ganadores: [], excluidos: [], filtros: sorteoFiltros()}; commit(); } });
+  $("btnResetYes").addEventListener("click", () => { $("confirmReset").hidden = true; showWinner = null; if (S){ if (modoFinal()) S.sorteoFinal = Object.assign({}, S.sorteoFinal || {}, {ganadores: [], spin: null}); else S.sorteo = {ganadores: [], excluidos: [], filtros: sorteoFiltros()}; commit(); } });
   // Quitar o devolver participantes
   document.getElementById("sorteo").addEventListener("click", e => {
     const x = e.target.closest("[data-excl],[data-incl]"); if (!x || !M.admin || !S || spinning || holding) return;
@@ -3808,7 +3944,12 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   document.addEventListener("click", e => { const th = e.target.closest && e.target.closest("th.ayuda"); if (th){ e.stopPropagation(); abrirThPop(th); } else cerrarThPop(); }, true);
   document.addEventListener("keydown", e => { const th = e.target.closest && e.target.closest("th.ayuda"); if (th && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); abrirThPop(th); } if (e.key === "Escape") cerrarThPop(); });
   addEventListener("scroll", cerrarThPop, true);
+  // Mientras la ruleta gira no se redibuja la página (llegan avisos de la base de datos justo al girar y trababan la animación);
+  // lo pendiente se dibuja apenas se detiene.
+  let renderPend = false;
   function render(){
+    if (spinning && view === "sorteo"){ renderPend = true; return; }
+    renderPend = false;
     try { aliasHist(); } catch(e){}
     try { renderCompanion(); } catch(e){}
     try { pintarPerfilMenu(); } catch(e){}
