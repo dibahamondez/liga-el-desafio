@@ -445,6 +445,9 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* Ayuda de siglas en encabezados: mouse (title) o toque (globito) */
+th.ayuda{cursor:help;text-decoration:underline dotted rgba(255,255,255,.35);text-underline-offset:3px}
+.th-pop{position:fixed;z-index:200;max-width:240px;background:var(--surface);border:1px solid var(--gold);border-radius:10px;padding:8px 11px;font-size:13px;line-height:1.35;color:var(--text,#eee);box-shadow:0 10px 30px rgba(0,0,0,.55);text-transform:none;letter-spacing:0;font-family:inherit;pointer-events:none;animation:popIn .15s ease}
 /* Companion: QR del evento en el modo pantalla */
 .tv-comp{display:none}
 body.display .tv-comp:not([hidden]){display:flex;flex-direction:column;align-items:center;gap:8px;position:fixed;right:22px;bottom:22px;z-index:20;background:var(--surface);border:2px solid var(--gold);border-radius:18px;padding:16px 18px;box-shadow:0 18px 50px rgba(0,0,0,.6);max-width:300px;text-align:center}
@@ -1037,7 +1040,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       <div class="stand">
         <div class="stand-scroll">
           <table>
-            <thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th>Pts</th><th>V</th><th>K</th><th>S</th><th>PJ</th><th class="buch" title="Buchholz: suma de los puntos de los rivales enfrentados">Buch</th><th>Mesa</th></tr></thead>
+            <thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Sobrevivencias: partidas en que llegó vivo al final sin ganar" tabindex="0">S</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="buch ayuda" tabindex="0" title="Buchholz: suma de los puntos de los rivales enfrentados">Buch</th><th class="ayuda" title="Mesa actual" tabindex="0">Mesa</th></tr></thead>
             <tbody id="standBody"></tbody>
           </table>
         </div>
@@ -2039,7 +2042,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       ${evs.length && STADM() ? `<div class="summary"><span><b>${inMonth.length}</b>${inMonth.length === 1 ? "jornada" : "jornadas"}</span><span><b>${stand.length}</b>jugadores</span><span><b>${totK}</b>kills</span></div>` : ""}
       ${!evs.length ? '<div class="empty"><b>Aún no hay jornadas</b>Cuando se registren resultados en la liga, aquí aparecerán el standing del mes y los rankings de mazos y comandantes.</div>' : `
       <div class="card"><div class="sec-head" style="margin:0"><h3>Standing ${statMonth === "all" ? "histórico" : "de " + monthLabel(statMonth).toLowerCase()}${standVis.length < stand.length ? " · Top " + standVis.length : ""}</h3>${topSel}</div><p class="card-sub">Suma de puntos de todas las jornadas del período, más el <b>bono de variedad: +${BONO_PTS} pts</b> para quien juegue al menos ${BONO_MAZOS} ${B3 ? "comandantes" : "mazos"} distintos entre las ${statMonth === "all" ? "fechas" : ((calOf(statMonth) && calOf(statMonth).fechas.length) || FECHAS_MES) + " fechas"} del mes. ${statMonth === cm ? "El bono del mes en curso queda firme al cierre del mes." : ""} Desempate: kills, Buchholz y victorias.</p>
-        <div class="stand-scroll"><table><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th>Pts</th><th title="Puntos negativos: penalizaciones y warnings">Neg</th><th>Base</th><th>Bono</th><th>${B3 ? "Comandantes" : "Mazos"}</th><th>Fechas</th><th>V</th><th>K</th><th>PJ</th><th class="l">${B3 ? "Comandante más usado" : "Mazo más usado"}</th></tr></thead><tbody>${standVis.map((p, i) => {
+        <div class="stand-scroll"><table><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" tabindex="0" title="Puntos negativos: penalizaciones y warnings">Neg</th><th class="ayuda" title="Puntos ganados en las mesas (sin el bono)" tabindex="0">Base</th><th class="ayuda" title="Bono por variedad: puntos extra por jugar con distintos mazos o comandantes en el mes" tabindex="0">Bono</th><th>${B3 ? "Comandantes" : "Mazos"}</th><th class="ayuda" title="Fechas jugadas" tabindex="0">Fechas</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="l">${B3 ? "Comandante más usado" : "Mazo más usado"}</th></tr></thead><tbody>${standVis.map((p, i) => {
           const top = Object.entries(p.decks).sort((a, b) => b[1] - a[1])[0];
           const pk = fold(p.nombre).trim();
           return `<tr class="${i === 0 ? "top1" : i < 3 ? "top3" : ""}${i < 4 ? " t4" : ""}${STADM() && editPlayer === pk ? " sel" : ""}" ${STADM() ? `data-edit-player="${esc(pk)}" title="Editar estadísticas de ${esc(p.nombre)}" style="cursor:pointer"` : 'style="cursor:default"'}><td class="l pos">${medalla(i)}</td><td class="l nm">${avatarHTML(null, p.nombre)}${esc(p.nombre)}${STADM() ? ' <span class="edit-hint">✎</span>' : ""}${apodoHTML(null, p.nombre)}</td><td class="pts">${p.pts}</td><td>${p.neg ? `<span class="neg">−${p.neg}</span>` : "–"}</td><td>${p.base}</td><td>${p.bono ? `<span class="bono">+${p.bono}</span>` : "–"}</td><td title="${statMonth === "all" ? "Mazos distintos en todo el histórico" : "Mazos distintos jugados este mes"}">${statMonth === "all" ? p.distintos : `<span class="${p.distintos >= BONO_MAZOS ? "ok-t" : ""}">${Math.min(p.distintos, BONO_MAZOS)}/${BONO_MAZOS}</span>`}</td><td>${statMonth === "all" ? p.fechas : p.fechas + "/" + ((calOf(statMonth) && calOf(statMonth).fechas.length) || FECHAS_MES)}</td><td>${p.w}</td><td>${p.kills}</td><td>${p.pj}</td><td class="l${cmdDeKey(top && top[0]) ? " cmd-art" : ""}" style="color:var(--muted)">${artFondo(cmdDeKey(top && top[0]), top && DECK[top[0]] ? artMazo(top[0]) : "")}${top ? (DECK[top[0]] ? `<span class="deck-set">${setIcon(DECK[top[0]].set)}${esc(DECK[top[0]].name)}</span>` : `<span class="deck-set">${(c => c != null ? `<span class="ci">${ciPips(c)}</span>` : "")(ciFor(top[0].replace(/^c:/, "")))}${esc(top[0].replace(/^c:/, ""))}</span>`) : "–"}</td></tr>`; }).join("")}</tbody></table></div>${STADM() ? `<p class="note" style="margin:0">Organizador: toca a un jugador para corregir sus números. ${topN ? `Los jugadores ven solo el top ${topN}; tú los ves a todos (${stand.length}).` : "Los jugadores ven el standing completo."}</p>` : standVis.length < stand.length ? '<p class="note" style="margin:0">Se muestra el top ' + standVis.length + '. Tu posición y todos tus números están en “Mis estadísticas”.</p>' : ""}</div>
@@ -2067,7 +2070,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     return `<div class="card edit-stats" id="editStats"><div class="sec-head" style="margin:0"><h3>Corregir estadísticas · ${esc(nombre)}</h3><button class="btn ghost" type="button" data-edit-close>Cerrar</button></div>
       <p class="card-sub">Cambia los números de una fecha guardada y presiona Guardar. El standing y las estadísticas se recalculan solos. Queda registro de quién corrigió y cuándo.</p>
       ${editExtrasHTML(list, live, nombre)}
-      <div class="stand-scroll"><table class="edit-tbl"><thead><tr><th class="l">Fecha</th><th>Pts</th><th>V</th><th>K</th><th>S</th><th>PJ</th><th title="Puntos negativos (solo informativo: los Pts ya los descuentan)">Neg</th><th class="l">Motivo (opcional)</th><th></th></tr></thead><tbody>${list.map(e => {
+      <div class="stand-scroll"><table class="edit-tbl"><thead><tr><th class="l">Fecha</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Sobrevivencias: partidas en que llegó vivo al final sin ganar" tabindex="0">S</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="ayuda" tabindex="0" title="Puntos negativos (solo informativo: los Pts ya los descuentan)">Neg</th><th class="l">Motivo (opcional)</th><th></th></tr></thead><tbody>${list.map(e => {
         const j = e.jugadores.find(j => fold(j.nombre).trim() === editPlayer);
         const enVivo = e.enCurso || e.id === "actual" || e.id === live;
         const ult = (e.editado || []).filter(x => fold(x.nombre).trim() === editPlayer).slice(-1)[0];
@@ -3726,6 +3729,22 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     };
     img.src = url;
   });
+  // Toque en una sigla de encabezado (celular): muestra qué significa en un globito
+  let thPop = null, thPopT = 0;
+  const cerrarThPop = () => { if (thPop){ thPop.remove(); thPop = null; } };
+  function abrirThPop(th){
+    cerrarThPop(); const t = th.getAttribute("title") || th.dataset.ayuda; if (!t) return;
+    if (th.getAttribute("title")){ th.dataset.ayuda = t; }
+    thPop = document.createElement("div"); thPop.className = "th-pop"; thPop.innerHTML = `<b>${esc(th.textContent.trim())}</b>: ${esc(t)}`;
+    document.body.appendChild(thPop);
+    const r = th.getBoundingClientRect(), w = thPop.offsetWidth;
+    thPop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+    thPop.style.top = (r.bottom + 6) + "px";
+    clearTimeout(thPopT); thPopT = setTimeout(cerrarThPop, 3500);
+  }
+  document.addEventListener("click", e => { const th = e.target.closest && e.target.closest("th.ayuda"); if (th){ e.stopPropagation(); abrirThPop(th); } else cerrarThPop(); }, true);
+  document.addEventListener("keydown", e => { const th = e.target.closest && e.target.closest("th.ayuda"); if (th && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); abrirThPop(th); } if (e.key === "Escape") cerrarThPop(); });
+  addEventListener("scroll", cerrarThPop, true);
   function render(){
     try { aliasHist(); } catch(e){}
     try { renderCompanion(); } catch(e){}
