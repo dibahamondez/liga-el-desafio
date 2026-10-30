@@ -902,6 +902,18 @@ body.display .hdr-right{display:none}
 .sat.extra{border-style:dashed;opacity:.55}
 .bono{font-family:var(--f-num);color:var(--gold);font-weight:500}
 .ok-t{color:var(--ok)}
+.fd-row{cursor:pointer}
+.fd-row:hover td,.fd-row.sel td{background:var(--surface-2)}
+.fd-chev{display:inline-block;width:12px;color:var(--gold)}
+.fd-det>td{padding:0 0 10px!important;background:transparent!important}
+.fd-box{text-align:left;border:1px solid var(--line,rgba(255,255,255,.12));border-left:3px solid var(--gold);border-radius:10px;padding:10px 12px;margin-top:4px;animation:abrirIn .2s ease}
+.fd-head{font-size:13px;color:var(--muted);margin-bottom:8px}
+.fd-head b{color:var(--gold)}
+.fd-tbl td,.fd-tbl th{white-space:nowrap}
+.fd-mazo{min-width:150px;max-width:280px;white-space:normal!important;font-size:13px}
+.fd-sub{display:block;color:var(--muted);font-size:11px}
+.fd-extra{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.fd-extra b{color:var(--text,#eee)}
 .ev-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .ev-list li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--surface-2);flex-wrap:wrap}
 .ev-list button{border:1px solid var(--line);background:transparent;border-radius:6px;padding:2px 9px;font-size:12px;color:var(--muted)}
@@ -2153,6 +2165,23 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     hist[id] = Object.assign({id}, doc);
     editMsg[id] = {t:"Guardado ✓", ok:true}; renderStats();
   }
+  // Detalle de una fecha guardada (solo organizadores): posiciones, mazo/comandante, puntos y kills de cada jugador
+  let fechaDet = null;
+  function fechaDetHTML(e, evsAll){
+    const js = (e.jugadores || []).slice().sort((a, b) => b.pts - a.pts || b.kills - a.kills || (b.buch || 0) - (a.buch || 0) || b.w - a.w || a.nombre.localeCompare(b.nombre));
+    const fn = fechaInfo(e, evsAll);
+    const mazo = j => {
+      const ci = j.ci != null ? j.ci : (j.cmd ? ciFor(j.cmd) : null);
+      if (B3) return `${ciTag(ci)} ${esc(j.cmd || "–")}`;
+      const d = DECK[j.k];
+      return `${ciTag(ci)} ${esc(d ? d.name : (j.k ? j.k.split("|")[1] : "–"))}${j.cmd ? `<small class="fd-sub">${esc(j.cmd)}</small>` : ""}`;
+    };
+    const sorteo = (e.sorteo || []).length ? `<p class="fd-extra"><b>Premios del sorteo:</b> ${e.sorteo.map(esc).join(", ")}</p>` : "";
+    const ed = (e.editado || []).length ? `<p class="fd-extra"><b>Correcciones:</b> ${e.editado.length} (${[...new Set(e.editado.map(x => x.nombre))].map(esc).join(", ")})</p>` : "";
+    return `<div class="fd-box"><div class="fd-head"><b>${fn.extra ? "Fecha extra (no suma)" : "Fecha " + fn.n + " de " + fn.total}</b> · ${fmtDate(e.fecha)} · ${js.length} jugadores · ${e.rondas || "?"} rondas</div>
+      <div class="stand-scroll"><table class="fd-tbl"><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th class="l">${B3 ? "Comandante" : "Mazo"}</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Sobrevivencias: partidas en que llegó vivo al final sin ganar" tabindex="0">S</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="ayuda" title="Puntos negativos (ya descontados de los Pts)" tabindex="0">Neg</th><th class="buch ayuda" title="Buchholz: suma de los puntos de los rivales enfrentados" tabindex="0">Buch</th></tr></thead>
+      <tbody>${js.map((j, i) => `<tr><td class="pos">${i + 1}</td><td class="l"><b>${esc(j.nombre)}</b>${j.tarde ? ' <span class="tag">Llegó tarde</span>' : ""}</td><td class="l fd-mazo">${mazo(j)}</td><td class="pts">${j.pts}</td><td>${j.w}</td><td>${j.kills}</td><td>${j.s || 0}</td><td>${j.pj}</td><td>${j.neg ? '<span class="pen">−' + j.neg + "</span>" : "0"}</td><td class="buch">${j.buch != null ? j.buch : "–"}</td></tr>`).join("")}</tbody></table></div>${sorteo}${ed}</div>`;
+  }
   function adminResumenHTML(evsAll, mes){
     const list = (mes === "all" ? evsAll : evsAll.filter(e => mesDe(e) === mes)).slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
     if (!list.length) return "";
@@ -2166,7 +2195,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const fieles = Object.values(asist).filter(a => a.c === list.length).length;
     return `<div class="card"><h3>Resumen de la liga · Solo organizadores</h3><p class="card-sub">Asistencia y movimiento ${mes === "all" ? "de todo el histórico" : "de " + monthLabel(mes).toLowerCase()}. Los jugadores no ven esta sección.</p>
       <div class="summary"><span><b>${list.length}</b>${list.length === 1 ? "fecha" : "fechas"}</span><span><b>${unicos}</b>jugadores distintos</span><span><b>${prom}</b>promedio por fecha</span><span><b>${fieles}</b>vinieron a todas</span></div>
-      <div class="stand-scroll"><table><thead><tr><th class="l">Fecha</th><th>Jugadores</th><th>Nuevos</th><th>Mesas jugadas</th><th>Kills</th><th>Premios sorteo</th></tr></thead><tbody>${filas.map(f => `<tr style="cursor:default"><td class="l">${fmtDate(f.e.fecha)}${f.e.enCurso ? ' · <span class="tag">En curso</span>' : ""}</td><td>${f.n}</td><td>${f.nuevos}</td><td>${f.mesas}</td><td>${f.kills}</td><td>${f.sorteo}</td></tr>`).join("")}</tbody></table></div></div>`;
+      <div class="stand-scroll"><table><thead><tr><th class="l">Fecha</th><th>Jugadores</th><th>Nuevos</th><th>Mesas jugadas</th><th>Kills</th><th>Premios sorteo</th></tr></thead><tbody>${filas.map(f => `<tr class="fd-row${fechaDet === f.e.id ? " sel" : ""}" data-fecha-det="${esc(f.e.id)}" title="Ver los resultados de esta fecha"><td class="l"><span class="fd-chev" aria-hidden="true">${fechaDet === f.e.id ? "▾" : "▸"}</span> ${fmtDate(f.e.fecha)}${f.e.enCurso ? ' · <span class="tag">En curso</span>' : ""}</td><td>${f.n}</td><td>${f.nuevos}</td><td>${f.mesas}</td><td>${f.kills}</td><td>${f.sorteo}</td></tr>`).join("")}</tbody></table></div>
+      ${(f => f ? fechaDetHTML(f.e, evsAll) : "")(filas.find(f => f.e.id === fechaDet))}
+      <p class="note" style="margin:8px 0 0">Toca una fecha para ver sus resultados: posiciones, comandantes, puntos y kills de cada jugador.</p></div>`;
   }
   function myStatsHTML(evs, cm){
     const myPid = M.uid ? links[M.uid] : null;
@@ -3047,6 +3078,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   $("stats").addEventListener("click", e => {
     if (ADMUI()){
       if (e.target.closest("[data-edit-close]")){ editPlayer = null; editMsg = {}; renderStats(); return; }
+      const fdr = e.target.closest("[data-fecha-det]");
+      if (fdr && !e.target.closest("th.ayuda")){ fechaDet = fechaDet === fdr.dataset.fechaDet ? null : fdr.dataset.fechaDet; renderStats(); return; }
       const sv = e.target.closest("[data-edit-save]"); if (sv){ saveStatsEdit(sv.dataset.editSave, sv.closest("tr")); return; }
       if (e.target.closest("[data-email-save]")){ document.activeElement.blur(); saveEmailEdit(); return; }
       if (e.target.closest("[data-deck-hist-save]")){ document.activeElement.blur(); saveDeckHistEdit(); return; }
