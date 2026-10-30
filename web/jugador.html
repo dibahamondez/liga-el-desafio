@@ -3161,22 +3161,23 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   function finalData(){
     const mes = curMes(), todas = allEvents();
     const fechas = todas.filter(e => !e.ejemplo && mesDe(e) === mes && !fechaInfo(e, todas).extra).sort((a, b) => a.fecha.localeCompare(b.fecha));
-    const F = (S && S.sorteoFinal) || {}, quitar = F.quitar || {}, poner = F.poner || {};
-    const votos = {}, nombres = {};
+    const F = (S && S.sorteoFinal) || {}, quitar = F.quitar || {}, poner = F.poner || {}, fuera = F.fuera || [];
+    const votos = {}, nombres = {}, fueraN = {};
     const fx = fechas.map((e, n) => {
       const js = (e.jugadores || []).map(j => {
-        const nombre = canon(j.nombre), cl = claveNombre(nombre), fijo = enNoSorteo(nombre);
+        const nombre = canon(j.nombre), cl = claveNombre(nombre), fijo = enNoSorteo(nombre), out = fuera.includes(cl);
+        if (out && !fueraN[cl]) fueraN[cl] = nombre;
         const auto = (j.wn || 0) > 0 ? "Tuvo warnings" : (j.neg || 0) > 0 ? "Tuvo puntos negativos" : "";
-        const incl = !fijo && (auto ? (poner[e.fecha] || []).includes(cl) : !(quitar[e.fecha] || []).includes(cl));
+        const incl = !fijo && !out && (auto ? (poner[e.fecha] || []).includes(cl) : !(quitar[e.fecha] || []).includes(cl));
         if (incl){ votos[cl] = (votos[cl] || 0) + 1; if (!nombres[cl] || nombres[cl] === nombres[cl].toLowerCase()) nombres[cl] = nombre; }
-        return {cl, nombre, incl, fijo, auto};
+        return {cl, nombre, incl, fijo: fijo || out, out, auto};
       }).sort((a, b) => a.nombre.localeCompare(b.nombre));
       return {e, n: n + 1, js, si: js.filter(x => x.incl).length};
     });
     const gan = F.ganadores || [], ganCl = new Set(gan.map(id => claveNombre(snm(id))));
     const pool = Object.keys(votos).filter(c => !ganCl.has(c)).sort((a, b) => nombres[a].localeCompare(nombres[b])).map(c => "n:" + nombres[c]);
     const w = pool.map(id => votos[claveNombre(snm(id))]);
-    return {mes, fechas: fx, votos, pool, w, gan, total: w.reduce((a, b) => a + b, 0)};
+    return {mes, fechas: fx, votos, pool, w, gan, fuera: Object.entries(fueraN).map(([cl, nombre]) => ({cl, nombre})), total: w.reduce((a, b) => a + b, 0)};
   }
   function renderSorteoFinal(){
     const d = finalData(), F = S.sorteoFinal || {};
@@ -3187,17 +3188,19 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const animWinner = spinning ? spinning.winner : null, shownGan = d.gan.filter(id => id !== animWinner);
     const lock = !ADMUI() || !!spinning || !!holding;
     $("sorteoSub").textContent = !d.fechas.length ? "Todavía no hay fechas jugadas este mes." : `Liga de ${monthLabel(d.mes).toLowerCase()}: cada fecha jugada da 1 voto. Quien vino a más fechas tiene más opciones de ganar.`;
-    $("filtSub").innerHTML = `Toca un nombre para sacar o devolver su voto de esa fecha. Por defecto no suman quienes tuvieron warnings o puntos negativos esa fecha${noSorteo().length ? ", ni la lista “Nunca entran”" : ""}. En la ruleta: <b>${d.pool.length}</b> ${d.pool.length === 1 ? "jugador" : "jugadores"} con <b>${d.total}</b> ${d.total === 1 ? "voto" : "votos"}.`;
+    $("filtSub").innerHTML = `Toca un nombre para sacar o devolver su voto de esa fecha. Por defecto no suman quienes tuvieron warnings o puntos negativos esa fecha${noSorteo().length ? ", ni la lista “Nunca entran”" : ""}. Para sacar a alguien de todo el sorteo, usa la × en “En la ruleta”. En la ruleta: <b>${d.pool.length}</b> ${d.pool.length === 1 ? "jugador" : "jugadores"} con <b>${d.total}</b> ${d.total === 1 ? "voto" : "votos"}.`;
     if (!typing($("filtBox"))) $("filtBox").innerHTML = d.fechas.map(f => `<details class="ff-fecha" data-ff-fecha="${esc(f.e.fecha)}" ${ffOpen.has(f.e.fecha) ? "open" : ""}><summary><b>Fecha ${f.n}</b> · ${fmtDate(f.e.fecha)}${f.e.enCurso ? ' <span class="tag">En curso</span>' : ""}<span class="ff-n">${f.si} de ${f.js.length} votos</span></summary>
-      <div class="ff-chips">${f.js.map(x => `<button type="button" class="ff-c${x.incl ? " on" : ""}${x.fijo ? " fijo" : ""}" data-ff="${esc(f.e.fecha)}|${esc(x.cl)}" ${lock || x.fijo ? "disabled" : ""} aria-pressed="${x.incl}" title="${x.fijo ? "Está en la lista “Nunca entran a la ruleta”" : x.auto ? x.auto + " esta fecha" + (x.incl ? " (lo devolviste a mano)" : "") : x.incl ? "Toca para sacar su voto de esta fecha" : "Toca para devolver su voto"}">${x.incl ? "✓ " : ""}${esc(x.nombre)}${x.auto ? ' <span class="ff-w">⚠</span>' : ""}</button>`).join("")}</div></details>`).join("") || '<p class="note" style="margin:0">Sin fechas este mes.</p>';
+      <div class="ff-chips">${f.js.map(x => `<button type="button" class="ff-c${x.incl ? " on" : ""}${x.fijo ? " fijo" : ""}" data-ff="${esc(f.e.fecha)}|${esc(x.cl)}" ${lock || x.fijo ? "disabled" : ""} aria-pressed="${x.incl}" title="${x.out ? "Lo sacaste de la ruleta: devuélvelo en “Quitados del sorteo”" : x.fijo ? "Está en la lista “Nunca entran a la ruleta”" : x.auto ? x.auto + " esta fecha" + (x.incl ? " (lo devolviste a mano)" : "") : x.incl ? "Toca para sacar su voto de esta fecha" : "Toca para devolver su voto"}">${x.incl ? "✓ " : ""}${esc(x.nombre)}${x.auto ? ' <span class="ff-w">⚠</span>' : ""}</button>`).join("")}</div></details>`).join("") || '<p class="note" style="margin:0">Sin fechas este mes.</p>';
     renderNoSorteo();
     $("winList").innerHTML = shownGan.length ? shownGan.map((id, i) => `<li><span class="pos-n">${i + 1}°</span><span class="nm-wrap"><span class="nm">${esc(snm(id))}</span><span class="why">${(n => n + (n === 1 ? " voto" : " votos"))((d.votos[claveNombre(snm(id))] || 0))}</span></span></li>`).join("") : '<li style="display:block;color:var(--muted)">Todavía no hay ganadores.</li>';
     const poolShown = spinning ? spinning.list : holding ? holding.list : d.pool;
     $("poolTitle").textContent = `En la ruleta (${poolShown.length})`;
     const canEdit = ADMUI() && !spinning && !holding;
     $("poolChips").innerHTML = poolShown.map(id => { const v = d.votos[claveNombre(snm(id))] || 0, t = `${esc(snm(id))} <small class="ff-v">${v} ${v === 1 ? "voto" : "votos"}</small>`;
-      return canEdit ? `<span class="xc">${t}<button type="button" data-ffx="${esc(claveNombre(snm(id)))}" aria-label="Sacar a ${esc(snm(id))} de todas las fechas" title="Sacar de todas las fechas">×</button></span>` : `<span>${t}</span>`; }).join("") || '<span>Nadie</span>';
-    $("exclCard").hidden = true;
+      return canEdit ? `<span class="xc">${t}<button type="button" data-ffx="${esc(claveNombre(snm(id)))}" aria-label="Sacar a ${esc(snm(id))} del sorteo" title="Sacar del sorteo">×</button></span>` : `<span>${t}</span>`; }).join("") || '<span>Nadie</span>';
+    $("exclCard").hidden = !d.fuera.length;
+    $("exclTitle").textContent = `Quitados del sorteo (${d.fuera.length})`;
+    $("exclChips").innerHTML = d.fuera.map(x => canEdit ? `<span class="xc out"><s>${esc(x.nombre)}</s><button type="button" data-ffr="${esc(x.cl)}" aria-label="Devolver a ${esc(x.nombre)} a la ruleta" title="Devolver a la ruleta con sus votos">↺</button></span>` : `<span class="out"><s>${esc(x.nombre)}</s></span>`).join("");
     const canSpin = ADMUI() && !spinning && !holding && d.pool.length > 0;
     $("btnSpin").hidden = !ADMUI(); $("btnSpin").disabled = !canSpin;
     $("btnSpin").textContent = d.pool.length ? "Girar la ruleta" : "No quedan participantes";
@@ -3230,11 +3233,11 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (i >= 0) arr.splice(i, 1); else arr.push(cl);
     m[fecha] = arr; F[lista] = m; S.sorteoFinal = F; commit();
   }
-  function sacarDeTodasFinal(cl){
-    const d = finalData(), F = Object.assign({}, S.sorteoFinal || {}), q = Object.assign({}, F.quitar || {}), p = Object.assign({}, F.poner || {});
-    d.fechas.forEach(f => { const j = f.js.find(x => x.cl === cl); if (!j || !j.incl) return;
-      if (j.auto) p[f.e.fecha] = (p[f.e.fecha] || []).filter(x => x !== cl); else q[f.e.fecha] = (q[f.e.fecha] || []).concat([cl]); });
-    F.quitar = q; F.poner = p; S.sorteoFinal = F; commit();
+  // Sacar a alguien a mano de todo el sorteo final (y devolverlo con sus votos tal como estaban)
+  function sacarDeTodasFinal(cl, devolver){
+    const F = Object.assign({}, S.sorteoFinal || {}), f = (F.fuera || []).filter(x => x !== cl);
+    if (!devolver) f.push(cl);
+    F.fuera = f; S.sorteoFinal = F; commit();
   }
   document.addEventListener("click", e => {
     const m = e.target.closest("[data-smodo]");
@@ -3243,6 +3246,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (c && M.admin && S && !spinning && !holding && modoFinal()){ const [f, cl] = c.dataset.ff.split("|"); cambiarVotoFinal(f, cl); return; }
     const x = e.target.closest("[data-ffx]");
     if (x && M.admin && S && !spinning && !holding && modoFinal()){ sacarDeTodasFinal(x.dataset.ffx); return; }
+    const rv = e.target.closest("[data-ffr]");
+    if (rv && M.admin && S && !spinning && !holding && modoFinal()){ sacarDeTodasFinal(rv.dataset.ffr, true); return; }
   });
   document.addEventListener("toggle", e => { const d = e.target; if (!d.matches || !d.matches(".ff-fecha")) return; if (d.open) ffOpen.add(d.dataset.ffFecha); else ffOpen.delete(d.dataset.ffFecha); }, true);
   function spin(){
