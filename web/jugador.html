@@ -3076,19 +3076,21 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     end += (reduce ? 1 : 9) * TWO;
     // "Se pasa y vuelve" ocurre solo a veces: lo decide el azar al girar (sp.ov) y es igual en todas las pantallas
     const over = 0;   // ya no se pasa del ganador ni se devuelve: frena directo y fluido
-    const WIND = reduce ? 0 : 750, MAIN = reduce ? 1200 : 11500, SETTLE = over ? 1300 : 0, back = 0.22;
+    const WIND = reduce ? 0 : 750, MAIN = reduce ? 1200 : 10000, SETTLE = over ? 1300 : 0, back = 0.22;
     const t0 = performance.now();
     spinning = {list, winner: sp.winner};
     $("winnerCard").hidden = true; $("btnSpin").disabled = true; $("spinMsg").textContent = "Preparando…";
     document.querySelector(".wheel-box").classList.add("girando"); fuego(true);
-    const easeOut = x => 1 - Math.pow(1 - x, 5), easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    const easeOut = x => 1 - Math.pow(1 - x, 4), easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
     const bajo = rot => { const a = ((-rot % TWO) + TWO) % TWO; let k = 0; while (k < n - 1 && G.a0[k + 1] <= a) k++; return k; };
     let prev = bajo(start), msgPrev = ""; const msgEl = $("spinMsg");
     const frame = now => {
       const t = now - t0;
       let rot, fase;
       if (t < WIND){ rot = start - back * easeInOut(t / WIND); fase = 0; }
-      else if (t < WIND + MAIN){ const x = (t - WIND) / MAIN; rot = (start - back) + (end + over - (start - back)) * easeOut(x); fase = 1; }
+      else if (t < WIND + MAIN){ const x = (t - WIND) / MAIN; rot = (start - back) + (end + over - (start - back)) * easeOut(x); fase = 1;
+        // al final el giro ya no se nota (menos de un grado por recorrer): se da por detenido y sale el ganador al tiro
+        if (!over && end - rot < 0.012){ rot = end; fase = 3; } }
       else if (t < WIND + MAIN + SETTLE){ const x = (t - WIND - MAIN) / SETTLE; rot = end + over - over * easeInOut(x); fase = 2; }
       else { rot = end; fase = 3; }
       FUEGO.w = rot - (FUEGO.ult == null ? rot : FUEGO.ult); FUEGO.vel = Math.abs(FUEGO.w) / 0.25; FUEGO.ult = rot;
