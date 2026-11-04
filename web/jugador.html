@@ -1667,6 +1667,32 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
 
   /* ---------- Inscripción: nombre, apellido, mazo precon y comandante ---------- */
   const inscOpen = () => S && S.phase === "inscripcion";
+  // ---------- Nombres reales: evita nombres falsos, inventados, con números o letras repetidas ----------
+  // Devuelve "" si el nombre parece real, o el motivo por el que se rechaza. Se aplica al nombre y al apellido por separado.
+  const NOMBRES_FALSOS = /^(test|testing|prueba|pruebas|asdf?|asdasd|qwe|qwerty|zxc|xxx+|nn|na|null|undefined|anonimo|anonima|nadie|jugador|jugadora|player|usuario|user|admin|nombre|apellido|sinnombre|sin|hola|chao|lol|xd|abc|abcd|aaa+|bbb+|ninguno|ninguna|desconocido|incognito|fantasma|yo|tu|el|ella|elmo|pepe ?grillo)$/;
+  const TECLADO = /(asdf|sdfg|dfgh|fghj|ghjk|hjkl|qwer|wert|erty|rtyu|tyui|yuio|uiop|zxcv|xcvb|cvbn|vbnm|qaz|wsx|edc|plok|lkjh|mnbv)/;
+  function nombreRealErr(v, que){
+    const t = String(v || "").trim();
+    if (!t) return `Falta el ${que}.`;
+    if (/\d/.test(t)) return `El ${que} no puede tener números.`;
+    if (!/^[\p{L}][\p{L}' -]*[\p{L}]$/u.test(t)) return `El ${que} solo puede tener letras (sin símbolos ni emojis).`;
+    const f = t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const palabras = f.split(/[\s'-]+/).filter(Boolean);
+    const PARTICULAS = /^(de|del|la|las|los|y|e|da|do|dos|di|van|von|der|den|mac|mc|san|santa|o|d|l|ng)$/;
+    for (const p of palabras){
+      if (p.length < 2 && !PARTICULAS.test(p)) return `Escribe el ${que} completo (sin iniciales).`;
+      if (/(.)\1\1/.test(p)) return `El ${que} “${t}” no parece real (letras repetidas).`;
+      if (!/[aeiouy]/.test(p) && !PARTICULAS.test(p)) return `El ${que} “${t}” no parece real.`;
+      if (/[^aeiouy]{5,}/.test(p)) return `El ${que} “${t}” no parece real.`;
+      if (TECLADO.test(p) || NOMBRES_FALSOS.test(p)) return `Usa tu ${que} real, no uno inventado.`;
+    }
+    if (NOMBRES_FALSOS.test(f)) return `Usa tu ${que} real, no uno inventado.`;
+    return "";
+  }
+  // Mayúscula inicial en cada palabra ("agustin morales" → "Agustin Morales"); las partículas (de, del, la…) quedan en minúscula
+  const nombreBonito = t => String(t || "").trim().replace(/\s+/g, " ").toLowerCase()
+    .replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase())
+    .replace(/(?!^)\b(De|Del|La|Las|Los|Y|E|Da|Do|Dos|Di|Van|Von|Der|Den)\b/g, w => w.toLowerCase());
   const fullName = r => (r.first + " " + r.last).trim();
   function registrants(){
     if (!S) return [];
@@ -1689,7 +1715,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   function readReg(prefix, selfId){
     const v = id => $(prefix + id).value.trim().replace(/\s+/g, " ");
-    const first = v("First"), last = v("Last"), k = B3 ? "" : DECK_BY_LABEL[v("Deck")], c1 = v("Cmd"), c2 = !B3 && hasPartner(prefix) ? v("Cmd2") : "";
+    const first = nombreBonito(v("First")), last = nombreBonito(v("Last")), k = B3 ? "" : DECK_BY_LABEL[v("Deck")], c1 = v("Cmd"), c2 = !B3 && hasPartner(prefix) ? v("Cmd2") : "";
+    const errNom = nombreRealErr(first, "nombre") || nombreRealErr(last, "apellido");
+    if (errNom){ $(prefix + "Err").textContent = errNom; return null; }
     if (!B3 && hasPartner(prefix) && !c2){ $(prefix + "Err").textContent = "Elige el segundo comandante (o desmarca partner)."; return null; }
     if (c2 && fold(c1) === fold(c2)){ $(prefix + "Err").textContent = "Los dos comandantes deben ser distintos."; return null; }
     const c = c2 ? c1 + " + " + c2 : c1;
@@ -1703,7 +1731,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       !c ? "Falta el comandante." : "";
     if (err === null) return null;   // readCmd ya mostró el error
     if (err){ $(prefix + "Err").textContent = err; return null; }
-    const dup = registrants().find(r => r.id !== selfId && fullName(r).toLowerCase() === (first + " " + last).toLowerCase());
+    // Repetido: mismo nombre, o un nombre que ya está unido a esta persona (por ejemplo, un apodo que se unió a su nombre real)
+    const dup = registrants().find(r => r.id !== selfId && (fullName(r).toLowerCase() === (first + " " + last).toLowerCase() || claveNombre(canon(fullName(r))) === claveNombre(canon(first + " " + last))));
     if (dup){ $(prefix + "Err").textContent = `${first} ${last} ya está inscrito.`; return null; }
     const deck = B3 ? Object.assign(b3, {ts:Date.now()}) : {k, c, ts:Date.now()};
     return email ? {first, last, email, deck} : {first, last, deck};
@@ -1819,10 +1848,22 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   const canon = n => { const a = (CAL && CAL.alias) || {}; const v = a[claveNombre(n)]; return v || n; };
   // Aplica las uniones al historial (en memoria): el nombre oficial reemplaza al otro; el original queda en j.n0
   function aliasHist(){
-    Object.values(hist || {}).forEach(e => (e && e.jugadores || []).forEach(j => {
-      const orig = j.n0 || j.nombre, c = canon(orig);
-      if (c !== orig){ j.n0 = orig; j.nombre = c; } else if (j.n0){ j.nombre = j.n0; delete j.n0; }
-    }));
+    Object.values(hist || {}).forEach(e => {
+      if (!e) return;
+      if (e._dups){ e.jugadores = (e.jugadores || []).concat(e._dups); delete e._dups; }
+      (e.jugadores || []).forEach(j => {
+        const orig = j.n0 || j.nombre, c = canon(orig);
+        if (c !== orig){ j.n0 = orig; j.nombre = c; } else if (j.n0){ j.nombre = j.n0; delete j.n0; }
+      });
+      // Si alguien se inscribió dos veces la misma fecha (por ejemplo, con un nombre falso que después se unió a su nombre real),
+      // esa fecha cuenta una sola vez: se queda la entrada que más jugó y la otra no suma
+      const vistos = {}, dups = [];
+      (e.jugadores || []).forEach(j => { const k = fold(j.nombre).trim(), o = vistos[k];
+        if (!o){ vistos[k] = j; return; }
+        const mejor = (j.pj || 0) - (o.pj || 0) || (j.pts || 0) - (o.pts || 0) || (j.kills || 0) - (o.kills || 0);
+        if (mejor > 0){ dups.push(o); vistos[k] = j; } else dups.push(j); });
+      if (dups.length){ e.jugadores = e.jugadores.filter(j => !dups.includes(j)); e._dups = dups; }
+    });
   }
   const levN = (a, b) => { if (a === b) return 0; const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 3; let prev = Array.from({length:n + 1}, (_, j) => j);
     for (let i = 1; i <= m; i++){ const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; } return prev[n]; };
@@ -4813,6 +4854,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       const parts = (nm || "").split(" "), k = B3 ? "" : findDeckKey(dk);
       if (B3){
         if (parts.length < 2){ bad.push(`Línea ${i + 1}: falta nombre y apellido`); return; }
+        { const e2 = nombreRealErr(parts[0], "nombre") || nombreRealErr(parts.slice(1).join(" "), "apellido"); if (e2){ bad.push(`Línea ${i + 1}: ${e2}`); return; } }
         if (seen.has(nm.toLowerCase())){ bad.push(`Línea ${i + 1}: ${nm} ya está inscrito`); return; }
         seen.add(nm.toLowerCase());
         const r = {first:parts[0], last:parts.slice(1).join(" ")};
@@ -4822,6 +4864,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         return;
       }
       if (parts.length < 2){ bad.push(`Línea ${i + 1}: falta nombre y apellido`); return; }
+      { const e2 = nombreRealErr(parts[0], "nombre") || nombreRealErr(parts.slice(1).join(" "), "apellido"); if (e2){ bad.push(`Línea ${i + 1}: ${e2}`); return; } }
       if (!k){ bad.push(`Línea ${i + 1}: “${dk || "sin mazo"}” no es un precon de la lista`); return; }
       if (seen.has(nm.toLowerCase())){ bad.push(`Línea ${i + 1}: ${nm} ya está inscrito`); return; }
       seen.add(nm.toLowerCase());

@@ -241,7 +241,34 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   }
   const done = () => { store.del("desafio-pend"); close(); location.reload(); };
 
-  const nameErr = (v, what) => v.length < R.nombreMin || v.length > R.nombreMax ? `El ${what} debe tener entre ${R.nombreMin} y ${R.nombreMax} caracteres.` : !NOMBRE_RE.test(v) ? `El ${what} solo puede tener letras, espacios, guion o apóstrofo.` : "";
+  // ---------- Nombres reales (mismas reglas que la inscripción): evita nombres falsos, inventados, con números o letras repetidas ----------
+  // Devuelve "" si el nombre parece real, o el motivo por el que se rechaza. Se aplica al nombre y al apellido por separado.
+  const NOMBRES_FALSOS = /^(test|testing|prueba|pruebas|asdf?|asdasd|qwe|qwerty|zxc|xxx+|nn|na|null|undefined|anonimo|anonima|nadie|jugador|jugadora|player|usuario|user|admin|nombre|apellido|sinnombre|sin|hola|chao|lol|xd|abc|abcd|aaa+|bbb+|ninguno|ninguna|desconocido|incognito|fantasma|yo|tu|el|ella|elmo|pepe ?grillo)$/;
+  const TECLADO = /(asdf|sdfg|dfgh|fghj|ghjk|hjkl|qwer|wert|erty|rtyu|tyui|yuio|uiop|zxcv|xcvb|cvbn|vbnm|qaz|wsx|edc|plok|lkjh|mnbv)/;
+  function nombreRealErr(v, que){
+    const t = String(v || "").trim();
+    if (!t) return `Falta el ${que}.`;
+    if (/\d/.test(t)) return `El ${que} no puede tener números.`;
+    if (!/^[\p{L}][\p{L}' -]*[\p{L}]$/u.test(t)) return `El ${que} solo puede tener letras (sin símbolos ni emojis).`;
+    const f = t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const palabras = f.split(/[\s'-]+/).filter(Boolean);
+    const PARTICULAS = /^(de|del|la|las|los|y|e|da|do|dos|di|van|von|der|den|mac|mc|san|santa|o|d|l|ng)$/;
+    for (const p of palabras){
+      if (p.length < 2 && !PARTICULAS.test(p)) return `Escribe el ${que} completo (sin iniciales).`;
+      if (/(.)\1\1/.test(p)) return `El ${que} “${t}” no parece real (letras repetidas).`;
+      if (!/[aeiouy]/.test(p) && !PARTICULAS.test(p)) return `El ${que} “${t}” no parece real.`;
+      if (/[^aeiouy]{5,}/.test(p)) return `El ${que} “${t}” no parece real.`;
+      if (TECLADO.test(p) || NOMBRES_FALSOS.test(p)) return `Usa tu ${que} real, no uno inventado.`;
+    }
+    if (NOMBRES_FALSOS.test(f)) return `Usa tu ${que} real, no uno inventado.`;
+    return "";
+  }
+  // Mayúscula inicial en cada palabra ("agustin morales" → "Agustin Morales"); las partículas (de, del, la…) quedan en minúscula
+  const nombreBonito = t => String(t || "").trim().replace(/\s+/g, " ").toLowerCase()
+    .replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase())
+    .replace(/(?!^)\b(De|Del|La|Las|Los|Y|E|Da|Do|Dos|Di|Van|Von|Der|Den)\b/g, w => w.toLowerCase());
+  const nameErr = (v, what) => nombreRealErr(v, what) || nameErrBase(v, what);
+  const nameErrBase = (v, what) => v.length < R.nombreMin || v.length > R.nombreMax ? `El ${what} debe tener entre ${R.nombreMin} y ${R.nombreMax} caracteres.` : !NOMBRE_RE.test(v) ? `El ${what} solo puede tener letras, espacios, guion o apóstrofo.` : "";
   async function onSubmit(e){
     e.preventDefault();
     const f = e.target; setErr("");
@@ -267,7 +294,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       return setErr(friendly(error));
     }
     if (f.id === "fPerfil"){
-      const first = clean($a("aFirst").value), last = clean($a("aLast").value), nick = clean($a("aNick").value);
+      const first = nombreBonito(clean($a("aFirst").value)), last = nombreBonito(clean($a("aLast").value)), nick = clean($a("aNick").value);
       const err = nameErr(first, "nombre") || nameErr(last, "apellido") ||
         (nick && (nick.length < R.apodoMin || nick.length > R.apodoMax) ? `El apodo debe tener entre ${R.apodoMin} y ${R.apodoMax} caracteres.` : "");
       if (err) return setErr(err);
@@ -280,7 +307,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       return done();
     }
     if (f.id === "fSignup"){
-      const first = clean($a("aFirst").value), last = clean($a("aLast").value), nick = clean($a("aNick").value);
+      const first = nombreBonito(clean($a("aFirst").value)), last = nombreBonito(clean($a("aLast").value)), nick = clean($a("aNick").value);
       const email = clean($a("aEmail").value).toLowerCase(), p1 = $a("aPass").value, p2 = $a("aPass2").value;
       ctx.email = email;
       const err = nameErr(first, "nombre") || nameErr(last, "apellido") ||
@@ -324,7 +351,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     }
     if (f.id === "fCuenta"){
       const c = ctx.cta || {};
-      const first = clean($a("aFirst").value), last = clean($a("aLast").value), nick = clean($a("aNick").value);
+      const first = nombreBonito(clean($a("aFirst").value)), last = nombreBonito(clean($a("aLast").value)), nick = clean($a("aNick").value);
       const email = clean($a("aEmail").value).toLowerCase(), p1 = "", p2 = "";
       const err = nameErr(first, "nombre") || nameErr(last, "apellido") ||
         (nick && (nick.length < R.apodoMin || nick.length > R.apodoMax) ? `El apodo debe tener entre ${R.apodoMin} y ${R.apodoMax} caracteres.` : "") ||
