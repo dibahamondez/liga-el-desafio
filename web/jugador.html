@@ -938,6 +938,8 @@ body.display .hdr-right{display:none}
 .fd-box{text-align:left;border:1px solid var(--line,rgba(255,255,255,.12));border-left:3px solid var(--gold);border-radius:10px;padding:10px 12px;margin-top:4px;animation:abrirIn .2s ease}
 .fd-head{font-size:13px;color:var(--muted);margin-bottom:8px}
 .fd-head b{color:var(--gold)}
+.fd-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.fd-exp{padding:6px 12px;font-size:12px}
 .fd-tbl td,.fd-tbl th{white-space:nowrap}
 .fd-mazo{min-width:150px;max-width:280px;white-space:normal!important;font-size:13px}
 .fd-sub{display:block;color:var(--muted);font-size:11px}
@@ -2261,6 +2263,23 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       <div class="fd-acts"><button class="btn primary" type="button" data-fd-save>Guardar</button><button class="btn ghost" type="button" data-fd-cancel>Cancelar</button><span class="${m && m.ok ? "ok-t" : "err"}" style="font-size:13px">${m ? esc(m.t) : ""}</span></div>
       <p class="note" style="margin:0">Neg es solo informativo: los Pts que escribas son los que cuentan (ya con el descuento).</p></div></td></tr>`;
   }
+  // Exportar los jugadores de una fecha a un archivo que abre Excel (CSV con “;”, como lo usa Excel en Chile)
+  function exportarFecha(id){
+    const e = allEvents().find(x => x.id === id); if (!e) return;
+    const js = (e.jugadores || []).slice().sort((a, b) => b.pts - a.pts || b.kills - a.kills || (b.buch || 0) - (a.buch || 0) || b.w - a.w || a.nombre.localeCompare(b.nombre));
+    const celda = v => { const t = v == null ? "" : String(v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const cab = ["Posición", "Nombre", "Apellido", "Nombre completo"].concat(B3 ? ["Comandante"] : ["Mazo", "Comandante"], ["Pts", "Victorias", "Kills", "Sobrevivencias", "Partidas jugadas", "Negativos", "Buchholz", "Llegó tarde", "Correo"]);
+    const filas = js.map((j, i) => {
+      const partes = j.nombre.trim().split(/\s+/), d = DECK[j.k];
+      return [i + 1, partes[0], partes.slice(1).join(" "), j.nombre].concat(B3 ? [j.cmd || ""] : [d ? d.name : (j.k ? j.k.split("|")[1] : ""), j.cmd || ""],
+        [j.pts, j.w, j.kills, j.s || 0, j.pj, j.neg || 0, j.buch != null ? j.buch : "", j.tarde ? "Sí" : "", correoDe(j.nombre)]);
+    });
+    const txt = "\ufeff" + [cab].concat(filas).map(f => f.map(celda).join(";")).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([txt], {type: "text/csv;charset=utf-8"}));
+    a.download = `jugadores-${B3 ? "b3" : "precon"}-${e.fecha}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
   function fechaDetHTML(e, evsAll){
     const js = (e.jugadores || []).slice().sort((a, b) => b.pts - a.pts || b.kills - a.kills || (b.buch || 0) - (a.buch || 0) || b.w - a.w || a.nombre.localeCompare(b.nombre));
     const fn = fechaInfo(e, evsAll);
@@ -2272,7 +2291,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     };
     const sorteo = "";
     const ed = (e.editado || []).length ? `<p class="fd-extra"><b>Correcciones:</b> ${e.editado.length} (${[...new Set(e.editado.map(x => x.nombre))].map(esc).join(", ")})</p>` : "";
-    return `<div class="fd-box"><div class="fd-head"><b>${fn.extra ? "Fecha extra (no suma)" : "Fecha " + fn.n + " de " + fn.total}</b> · ${fmtDate(e.fecha)} · ${js.length} jugadores · ${e.rondas || "?"} rondas</div>
+    return `<div class="fd-box"><div class="fd-head"><span><b>${fn.extra ? "Fecha extra (no suma)" : "Fecha " + fn.n + " de " + fn.total}</b> · ${fmtDate(e.fecha)} · ${js.length} jugadores · ${e.rondas || "?"} rondas</span><button class="btn ghost fd-exp" type="button" data-fd-export="${esc(e.id)}" title="Descarga la lista de jugadores de esta fecha para abrirla en Excel">⬇ Exportar jugadores</button></div>
       <div class="stand-scroll"><table class="fd-tbl"><thead><tr><th class="pos-h">#</th><th class="l">Jugador</th><th class="l">${B3 ? "Comandante" : "Mazo"}</th><th class="ayuda" title="Puntos" tabindex="0">Pts</th><th class="ayuda" title="Victorias" tabindex="0">V</th><th class="ayuda" title="Kills" tabindex="0">K</th><th class="ayuda" title="Sobrevivencias: partidas en que llegó vivo al final sin ganar" tabindex="0">S</th><th class="ayuda" title="Partidas jugadas" tabindex="0">PJ</th><th class="ayuda" title="Puntos negativos (ya descontados de los Pts)" tabindex="0">Neg</th><th class="buch ayuda" title="Buchholz: suma de los puntos de los rivales enfrentados" tabindex="0">Buch</th></tr></thead>
       <tbody>${js.map((j, i) => { const cl = fold(j.nombre).trim(), abierta = fdEdit && fdEdit.id === e.id && fdEdit.clave === cl;
         return `<tr class="fd-jrow${abierta ? " sel" : ""}" data-fd-j="${esc(cl)}" data-fd-ev="${esc(e.id)}" title="Corregir los puntos de ${esc(j.nombre)} en esta fecha"><td class="pos">${i + 1}</td><td class="l"><b>${nombreGanador(j.nombre)}</b>${j.tarde ? ' <span class="tag">Llegó tarde</span>' : ""}</td><td class="l fd-mazo">${mazo(j)}</td><td class="pts">${j.pts}</td><td>${j.w}</td><td>${j.kills}</td><td>${j.s || 0}</td><td>${j.pj}</td><td>${j.neg ? '<span class="pen">−' + j.neg + "</span>" : "0"}</td><td class="buch">${j.buch != null ? j.buch : "–"}</td></tr>${abierta ? fdEditHTML(e, j) : ""}`; }).join("")}</tbody></table></div>
@@ -3391,6 +3410,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   $("stats").addEventListener("click", e => {
     if (ADMUI()){
       if (e.target.closest("[data-edit-close]")){ editPlayer = null; editMsg = {}; renderStats(); return; }
+      const fx = e.target.closest("[data-fd-export]");
+      if (fx){ exportarFecha(fx.dataset.fdExport); return; }
       const fds = e.target.closest("[data-fd-save]");
       if (fds && fdEdit){ document.activeElement.blur(); saveStatsEdit(fdEdit.id, fds.closest(".fd-form"), fdEdit.clave); return; }
       if (e.target.closest("[data-fd-cancel]")){ fdEdit = null; editMsg = {}; renderStats(); return; }
