@@ -2478,6 +2478,30 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   // Sábados del mes que no estén ya usados por otra liga (p. ej. un 3 de octubre que fue la 4.ª fecha de septiembre)
   const proponer = mes => { const taken = new Set(Object.values(CAL.ligas || {}).filter(l => l.mes !== mes).flatMap(l => l.fechas).concat(realHist(null).filter(e => mesDe(e) !== mes).map(e => e.fecha)));
     return saturdaysFrom(mes).filter(f => !taken.has(f)).slice(0, FECHAS_MES); };
+  // Calendario automático: si el mes en curso no tiene liga, se arma sola con todos sus días de juego (jueves en B3, sábados en Precon)
+  // que no estén usados por otra liga, con la configuración de la liga anterior. Cuando ya pasaron todos los días del mes,
+  // también se arma la del mes siguiente. El organizador la puede editar como cualquier otra; si la borra, no se vuelve a crear.
+  let autoPend = false;
+  function autoCalendario(){
+    try {
+      if (!CAL.ligas) CAL.ligas = {};
+      const hoy = today(), d = parseISO(hoy), mesHoy = hoy.slice(0, 7), sig = iso(new Date(d.getFullYear(), d.getMonth() + 1, 1)).slice(0, 7);
+      const meses = [mesHoy], act = calOf(mesHoy);
+      if (!act || !act.fechas || !act.fechas.length || act.fechas.every(f => f < hoy)){ if (saturdaysFrom(mesHoy).every(f => f < hoy)) meses.push(sig); }
+      let nuevo = false;
+      meses.forEach(mes => {
+        if (calOf(mes) || (CAL.autoNo || []).includes(mes)) return;
+        const taken = new Set(Object.values(CAL.ligas).filter(l => l.mes !== mes).flatMap(l => l.fechas || []));
+        const fechas = saturdaysFrom(mes).filter(f => !taken.has(f));
+        if (!fechas.length) return;
+        CAL.ligas[mes] = {mes, fechas, cfg: ultimaCfg(), auto: true}; nuevo = true;
+      });
+      // Solo el organizador lo deja guardado (apenas se sepa que es organizador); para los demás se arma igual en pantalla
+      if (nuevo) autoPend = true;
+      if (autoPend && M.mode === "live" && M.admin){ autoPend = false; M.db.doc(CAL_DOC).set(JSON.parse(JSON.stringify(CAL))).catch(() => { autoPend = true; }); }
+      else if (autoPend && M.mode === "local"){ autoPend = false; try { localStorage.setItem(CKEY, JSON.stringify(CAL)); } catch(e){} }
+    } catch(e){}
+  }
   const ultimaCfg = () => { const l = Object.values(CAL.ligas || {}).filter(x => x.cfg).sort((a, b) => b.mes.localeCompare(a.mes))[0]; return Object.assign({}, DEFCFG, l ? l.cfg : (S ? S.cfg : {})); };
   function readCalForm(){
     const n = (id, def, lo, hi) => { const el = $(id); const v = el ? parseInt(el.value, 10) : NaN; return isNaN(v) ? def : Math.min(hi, Math.max(lo, v)); };
@@ -2493,7 +2517,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const ed = t.closest("[data-cal-edit]"); if (ed){ const l = calOf(ed.dataset.calEdit); calEdit = {mes:l.mes, fechas:l.fechas.slice(), nueva:false, cfg: Object.assign({}, DEFCFG, l.cfg || ultimaCfg())}; calDel = null; renderCal(); return; }
     const rm = t.closest("[data-cal-rm]"); if (rm){ calDel = rm.dataset.calRm; renderCal(); return; }
     if (t.closest("[data-cal-del-no]")){ calDel = null; renderCal(); return; }
-    const ry = t.closest("[data-cal-del-yes]"); if (ry && M.admin){ delete CAL.ligas[ry.dataset.calDelYes]; calDel = null; saveCal(); renderCal(); return; }
+    const ry = t.closest("[data-cal-del-yes]"); if (ry && M.admin){ const mb = ry.dataset.calDelYes; delete CAL.ligas[mb]; if (mb >= today().slice(0, 7)) CAL.autoNo = [...new Set((CAL.autoNo || []).concat([mb]))]; calDel = null; saveCal(); renderCal(); return; }
     if (!calEdit) return;
     if (t.id === "calCancel"){ calEdit = null; renderCal(); return; }
     if (t.id === "calAdd"){ readCalForm(); const last = calEdit.fechas.filter(Boolean).sort().pop(); let nf = "";
@@ -4123,6 +4147,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   let renderPend = false;
   function render(){
     if (spinning && view === "sorteo"){ renderPend = true; return; }
+    if (autoPend) autoCalendario();
     renderPend = false;
     try { aliasHist(); } catch(e){}
     try { renderCompanion(); } catch(e){}
@@ -5180,6 +5205,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     try { const h = localStorage.getItem(HKEY); if (h) hist = JSON.parse(h) || {}; } catch(e){}
     try { const r = localStorage.getItem(LKEY); if (r) S = normalize(JSON.parse(r)); } catch(e){}
     try { const c = localStorage.getItem(CKEY); if (c) CAL = Object.assign({ligas:{}}, JSON.parse(c)); } catch(e){}
+    autoCalendario();
     if (!S) S = freshState(SAMPLE, null, true);
     render();
   }
@@ -5222,7 +5248,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         S = d && d.players ? normalize(d) : null; ready = true;
         render(); autoApply();
       }, fail);
-      db.doc(CAL_DOC).onSnapshot(s => { const d = s.exists ? s.data() : null; CAL = Object.assign({ligas:{}}, d || {}); calListo = true; if (ready){ render(); if (view === "stats") renderStats(); if (view === "salon") renderSalon(); } }, () => {});
+      db.doc(CAL_DOC).onSnapshot(s => { const d = s.exists ? s.data() : null; CAL = Object.assign({ligas:{}}, d || {}); calListo = true; autoCalendario(); if (ready){ render(); if (view === "stats") renderStats(); if (view === "salon") renderSalon(); } }, () => {});
       db.collection("vinculos").onSnapshot(q => { links = {}; linkData = {}; q.docs.forEach(d => { const v = d.data(); if (v && v.pid){ links[d.id] = v.pid; linkData[d.id] = v; } }); if (ready){ render(); autoApply(); } }, () => {});
       db.collection("historial").onSnapshot(q => { hist = {}; q.docs.forEach(d => { const v = d.data(); if (v && (v.liga || "precon") === LIGA_DATOS) hist[d.id] = Object.assign({id:d.id}, v); }); if (view === "stats") renderStats(); }, () => {});
       db.collection("inscripciones").onSnapshot(q => { regs = {}; q.docs.forEach(d => { const v = d.data(); if (v) regs[d.id] = v; }); if (ready) render(); }, () => {});
