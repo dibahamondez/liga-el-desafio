@@ -663,4 +663,27 @@ async function alListo() {
   }
   iniciar();
 }
-(async () => { if (!ARG.includes("--grupos")) await elegirLiga(); crearCliente(await numeroVinculo()); client.initialize(); })();
+// Arranque con reintentos: a veces WhatsApp Web se recarga justo mientras el bot se conecta
+// ("Execution context was destroyed"). En vez de caerse, el bot espera unos segundos y vuelve a intentar;
+// desde el 2.º intento borra la copia guardada de WhatsApp Web (.wwebjs_cache) para que baje la versión nueva.
+const ERR_ARRANQUE = /Execution context was destroyed|Target closed|Session closed|detached Frame|Navigating frame was detached|Protocol error|net::ERR_/i;
+async function iniciarCliente(numero, intento = 1) {
+  crearCliente(numero);
+  try { await client.initialize(); }
+  catch (e) {
+    const msg = String(e && e.message || e).split("\n")[0];
+    try { await client.destroy(); } catch (e2) {}
+    if (intento < 5 && ERR_ARRANQUE.test(msg)) {
+      console.log(`${hora()} WhatsApp Web se recargó mientras el bot se conectaba. Reintentando (${intento}/4)...`);
+      if (intento >= 2) { try { fs.rmSync(path.join(DIR, ".wwebjs_cache"), { recursive: true, force: true }); } catch (e3) {} }
+      await new Promise(r => setTimeout(r, 4000 * intento));
+      return iniciarCliente(numero, intento + 1);
+    }
+    console.error(`${hora()} No se pudo conectar a WhatsApp: ${msg}`);
+    console.error("Cierra esta ventana y vuelve a abrir el bot. Si se repite, borra la carpeta .wwebjs_cache (no la de sesion-whatsapp).");
+    process.exit(1);
+  }
+}
+// Un error suelto de WhatsApp Web no debe botar el bot entero
+process.on("unhandledRejection", e => { const m = String(e && e.message || e).split("\n")[0]; console.error(`${hora()} Aviso: ${m}`); });
+(async () => { if (!ARG.includes("--grupos")) await elegirLiga(); await iniciarCliente(await numeroVinculo()); })();
