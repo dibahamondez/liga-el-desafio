@@ -864,6 +864,8 @@ body.display #sorteo .spin-row{position:relative;z-index:8}
 body.display #sorteo .spin-btn{font-size:clamp(18px,2.2vw,26px);padding:14px 34px;min-width:280px}
 body.display #sorteo .winner-card{cursor:pointer}
 body.is-admin #wheel{cursor:pointer}
+#wheel{transition:opacity .35s ease,transform .35s ease}
+#wheel.rearmando{opacity:0;transform:scale(.96)}
 .tv-exit:hover,.tv-exit:focus-visible{opacity:1}
 body.display .tv-exit{display:inline-flex}
 body.display .hdr-right{display:none}
@@ -3223,13 +3225,18 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         // el segmento ganador parpadea
         let k = 0; const blink = setInterval(() => { drawWheel(list, k++ % 2 ? null : sp.winner, W); if (k > 7){ clearInterval(blink); drawWheel(list, sp.winner, W); } }, 220);
         renderSorteo();
+        // El ganador queda 4 segundos en la ruleta; después la ruleta se rearma sin él con un fundido suave (sin saltos)
         setTimeout(() => {
-          holding = null;
-          // al sacar al ganador, se gira levemente para que el puntero quede en el mismo lugar
-          const rest = list.filter(id => id !== sp.winner);
-          if (rest.length && !W) wheelRot = -((i * rest.length / n) + 0.5) * (Math.PI * 2 / rest.length);
-          renderSorteo();
-        }, 2200);
+          const cv = $("wheel"); if (cv) cv.classList.add("rearmando");
+          setTimeout(() => {
+            holding = null;
+            // al sacar al ganador, se gira levemente para que el puntero quede en el mismo lugar
+            const rest = list.filter(id => id !== sp.winner);
+            if (rest.length && !W) wheelRot = -((i * rest.length / n) + 0.5) * (Math.PI * 2 / rest.length);
+            renderSorteo();
+            if (cv) requestAnimationFrame(() => cv.classList.remove("rearmando"));
+          }, 350);
+        }, 4000);
       }
     };
     requestAnimationFrame(frame);
