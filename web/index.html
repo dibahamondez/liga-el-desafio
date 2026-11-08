@@ -860,6 +860,10 @@ body.display #sorteo .wheel-box{width:min(100%,calc(100vh - 290px))}
 body.display #sorteo .wheel-wrap{position:relative}
 body.display #sorteo .winner-card{position:absolute;left:0;right:0;margin:auto;top:52%;max-width:min(720px,92%);z-index:5;box-shadow:0 20px 80px rgba(0,0,0,.75);background:radial-gradient(120% 120% at 50% 0%,rgba(233,180,76,.25),transparent 60%),var(--surface)}
 body.display #sorteo .winner-card .wn{font-size:clamp(40px,7vw,72px)}
+body.display #sorteo .spin-row{position:relative;z-index:8}
+body.display #sorteo .spin-btn{font-size:clamp(18px,2.2vw,26px);padding:14px 34px;min-width:280px}
+body.display #sorteo .winner-card{cursor:pointer}
+body.is-admin #wheel{cursor:pointer}
 .tv-exit:hover,.tv-exit:focus-visible{opacity:1}
 body.display .tv-exit{display:inline-flex}
 body.display .hdr-right{display:none}
@@ -3188,7 +3192,13 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const easeOut = x => 1 - Math.pow(1 - x, 4), easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
     const bajo = rot => { const a = ((-rot % TWO) + TWO) % TWO; let k = 0; while (k < n - 1 && G.a0[k + 1] <= a) k++; return k; };
     let prev = bajo(start), msgPrev = ""; const msgEl = $("spinMsg");
-    const frame = now => {
+    let fin = false;
+    // Si la pestaña queda en segundo plano el navegador pausa la animación: este respaldo la termina a tiempo igual
+    const respaldo = setTimeout(() => { if (!fin) frame(t0 + WIND + MAIN + SETTLE + 1); }, WIND + MAIN + SETTLE + 1500);
+    const frame = now => { if (fin) return;
+      try { paso(now); } catch(err){ console.error("ruleta:", err); try { paso(t0 + WIND + MAIN + SETTLE + 1); } catch(e2){ fin = true; spinning = null; holding = null; seenSpin = sp.id; showWinner = sp.winner; renderSorteo(); } }
+    };
+    const paso = now => {
       const t = now - t0;
       let rot, fase;
       if (t < WIND){ rot = start - back * easeInOut(t / WIND); fase = 0; }
@@ -3204,11 +3214,12 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       if (fase === 1 || fase === 2){ const txt = shortName(list[cur]) + (fase === 2 || (t - WIND) / MAIN > 0.85 ? "…" : ""); if (txt !== msgPrev){ msgPrev = txt; msgEl.textContent = txt; } }
       if (fase < 3) requestAnimationFrame(frame);
       else {
+        fin = true; clearTimeout(respaldo);
         document.querySelector(".wheel-box").classList.remove("girando"); fuego(false); FUEGO.ult = null;
         spinning = null; seenSpin = sp.id; showWinner = sp.winner; wheelRot = wheelRot % TWO;
         if (renderPend) setTimeout(() => { if (renderPend) render(); }, 50);
         holding = {list, winner: sp.winner, w: W};
-        fanfarria(); confeti();
+        try { fanfarria(); confeti(); } catch(e){}
         // el segmento ganador parpadea
         let k = 0; const blink = setInterval(() => { drawWheel(list, k++ % 2 ? null : sp.winner, W); if (k > 7){ clearInterval(blink); drawWheel(list, sp.winner, W); } }, 220);
         renderSorteo();
@@ -3218,7 +3229,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
           const rest = list.filter(id => id !== sp.winner);
           if (rest.length && !W) wheelRot = -((i * rest.length / n) + 0.5) * (Math.PI * 2 / rest.length);
           renderSorteo();
-        }, 6500);
+        }, 2200);
       }
     };
     requestAnimationFrame(frame);
@@ -3390,6 +3401,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     commit();
   }
   $("btnSpin").addEventListener("click", () => { audioCtx(); if (modoFinal()) spinFinal(); else spin(); });
+  const puedeGirar = () => view === "sorteo" && ADMUI() && !spinning && !holding && !$("btnSpin").disabled && !$("btnSpin").hidden;
+  document.addEventListener("keydown", e => {
+    if ((e.key === " " || e.key === "Enter") && puedeGirar() && !/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test((document.activeElement || {}).tagName || "")){ e.preventDefault(); $("btnSpin").click(); }
+  });
+  document.addEventListener("click", e => {
+    if (view !== "sorteo") return;
+    if (e.target.closest("#wheel") && puedeGirar()){ $("btnSpin").click(); return; }
+    if (e.target.closest("#winnerCard") && !spinning && !holding){ showWinner = null; $("winnerCard").hidden = true; }
+  });
 
   $("btnResetSorteo").addEventListener("click", () => $("confirmReset").hidden = false);
   $("btnResetNo").addEventListener("click", () => $("confirmReset").hidden = true);
@@ -4023,8 +4043,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       nb.textContent = `Armar ronda ${S.cur + 2}`; nb.classList.toggle("primary", completa);
       nb.title = completa ? "" : "Aún hay mesas sin resultado";
     }
-    $("btnRearmar").hidden = !(ADMUI() && relojSinPartir() && sinResultados() && isRandomRound(S.cfg, S.cur));
+    $("btnRearmar").hidden = !(ADMUI() && sinResultados());
     $("btnRearmar").textContent = `↺ Volver a armar la ronda ${S.cur + 1}`;
+    $("btnRearmar").title = isRandomRound(S.cfg, S.cur) ? "Vuelve a sortear al azar las mesas de esta ronda (mientras no haya resultados)." : "Vuelve a armar las mesas de esta ronda con el standing actual: sirve si corregiste resultados o agregaste o retiraste jugadores (mientras no haya resultados).";
   }
   function tick(){
     if (!S) return;
@@ -4868,8 +4889,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   $("btnMinus").addEventListener("click", () => adjust(-60000));
   $("btnReset").addEventListener("click", () => { S.timer = {running:false, endAt:0, left:S.cfg.min * 60000}; Object.keys(alerts).forEach(k => delete alerts[k]); commit(); });
   $("btnRearmar").addEventListener("click", () => {
-    if (!M.admin || !S || S.phase === "inscripcion" || !relojSinPartir() || !sinResultados() || !isRandomRound(S.cfg, S.cur)) return;
-    if (!confirm(`¿Volver a armar la ronda ${S.cur + 1}?\n\nSe vuelven a sortear al azar las mesas de esta ronda. Los cambios que hiciste a mano en estas mesas se pierden.`)) return;
+    if (!M.admin || !S || S.phase === "inscripcion" || !sinResultados()) return;
+    const azar = isRandomRound(S.cfg, S.cur), reloj = !relojSinPartir();
+    if (!confirm(`¿Volver a armar la ronda ${S.cur + 1}?\n\n${azar ? "Se vuelven a sortear al azar las mesas de esta ronda." : "Se vuelven a armar las mesas de esta ronda con el standing actual (incluye correcciones, jugadores nuevos y retirados)."} Los cambios que hiciste a mano en estas mesas se pierden.${reloj ? "\n\nEl reloj de la ronda vuelve a su tiempo inicial." : ""}`)) return;
+    if (reloj) S.timer = {running:false, endAt:0, left:S.cfg.min * 60000};
     if (S.cur === 0) S.orden = shuffleExcel(S.players.map(p => p.id));   // como reiniciar la fecha en el Excel: lista desordenada de nuevo
     S.rounds[S.cur] = buildRound(S, S.cur); moveSel = null;
     Object.keys(drafts).forEach(k => { if (k.startsWith("adm:" + S.cur + ":")) delete drafts[k]; });
@@ -4990,7 +5013,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     } else if (!empezo && !conRes){
       titulo = `Paso ${S.cur + 2} · Ronda ${S.cur + 1} armada`;
       txt = `Hay <b>${T.length} ${T.length === 1 ? "mesa" : "mesas"}</b>. Que cada uno busque su mesa (si alguien quedó mal, arrástralo a otra). Cuando estén sentados, inicia el reloj. ${isRandomRound(c, S.cur) ? `Si las mesas salieron mal, puedes <b>volver a armar la ronda</b> mientras el reloj no parta.` : "Esta ronda va por standing: las mesas no se vuelven a sortear (si alguien quedó mal, arrástralo)."}`;
-      btn = `<button class="btn primary" type="button" data-guia="start">▶ Iniciar ronda ${S.cur + 1}</button>${isRandomRound(c, S.cur) ? `<button class="btn ghost" type="button" data-guia="rearmar">↺ Volver a armar la ronda ${S.cur + 1}</button>` : ""}`;
+      btn = `<button class="btn primary" type="button" data-guia="start">▶ Iniciar ronda ${S.cur + 1}</button>${true ? `<button class="btn ghost" type="button" data-guia="rearmar">↺ Volver a armar la ronda ${S.cur + 1}</button>` : ""}`;
     } else {
       titulo = `Ronda ${S.cur + 1} en juego`;
       txt = `<b>${conRes} de ${T.length}</b> mesas con resultado. Cuando una mesa termine, un jugador la reporta desde su celular y tú tocas <b>Aprobar reporte</b> en esa mesa (o <b>Cargar resultado</b> si nadie reportó)${faltan.length ? ` · Faltan: ${faltan.map(n => "Mesa " + n).join(", ")}` : ""}.`;
