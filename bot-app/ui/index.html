@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>Bot Liga El Desafío</title>
+<style>
+:root{--bg:#0e0908;--s1:#17100e;--s2:#211714;--s3:#2c1f1b;--line:#3a2a25;--fg:#f4ece6;--mut:#a8968e;--red:#c8321a;--red2:#e0472b;--gold:#e9b44c;--ok:#4fbf7a;--warn:#f0a63a;--err:#ff6b55;--r:14px}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(1200px 600px at 70% -10%,rgba(200,50,26,.16),transparent 60%),var(--bg);color:var(--fg);font:14px/1.45 "Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.5}
+.btn{background:var(--s3);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-weight:600;transition:background .15s,border-color .15s,transform .05s}
+.btn:hover:not(:disabled){background:#382723;border-color:#55403a}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.pri{background:linear-gradient(180deg,var(--red2),var(--red));border-color:#e65a3e;color:#fff}
+.btn.pri:hover:not(:disabled){background:linear-gradient(180deg,#ef5638,#d13a20)}
+.btn.big{padding:13px 22px;font-size:16px;border-radius:12px}
+.btn.ghost{background:transparent}
+header{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);background:rgba(14,9,8,.85)}
+header img{width:40px;height:40px}
+header h1{margin:0;font-size:17px;letter-spacing:.02em}
+header h1 small{display:block;font-size:11px;color:var(--mut);font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-weight:600;font-size:13px}
+.pill i{width:9px;height:9px;border-radius:50%;background:var(--mut)}
+.pill.ok i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.pill.warn i{background:var(--warn);animation:lat 1s infinite}
+.pill.err i{background:var(--err)}
+@keyframes lat{50%{opacity:.3}}
+.sp{flex:1}
+.hdr-btns{display:flex;gap:8px}
+.btn.pausa.on{background:#4a2f0c;border-color:var(--warn);color:#ffd38a}
+main{flex:1;min-height:0;display:grid;grid-template-columns:300px minmax(0,1fr) 330px;gap:14px;padding:14px}
+.col{min-height:0;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:0}
+.card h2{margin:0 0 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:8px}
+.card h2 .sp{flex:1}
+.grow{flex:1;display:flex;flex-direction:column;min-height:0}
+.col.scroll>.card{flex:none}
+.col.scroll{padding-right:4px}
+.scroll{overflow:auto;min-height:0}
+.lista{display:flex;flex-direction:column;gap:6px}
+.grupo{display:flex;align-items:center;gap:10px;text-align:left;background:var(--s2);border:1px solid transparent;border-radius:10px;padding:9px 11px;width:100%}
+.grupo:hover{border-color:var(--line)}
+.grupo.sel{border-color:var(--red2);background:#2e1712}
+.grupo .av{width:32px;height:32px;border-radius:50%;background:var(--s3);display:grid;place-items:center;font-weight:700;color:var(--gold);flex:none}
+.grupo .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:rgba(233,180,76,.15);color:var(--gold);border:1px solid rgba(233,180,76,.35);white-space:nowrap}
+.tag.test{background:rgba(120,160,255,.12);color:#9fb7ff;border-color:rgba(120,160,255,.3)}
+.vacio{color:var(--mut);text-align:center;padding:24px 8px}
+.paso{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.paso b{width:24px;height:24px;border-radius:50%;background:var(--red);display:grid;place-items:center;font-size:12px;flex:none}
+.paso span{font-weight:700;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 16px;border-radius:999px;background:var(--s2);border:1px solid var(--line);font-weight:600}
+.chip.sel{background:#3a1a12;border-color:var(--red2);color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:14px 12px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:88px}
+.tile:hover:not(:disabled){border-color:#5a443d;background:#2a1d19}
+.tile.sel{border-color:var(--gold);background:#2d2114;box-shadow:inset 0 0 0 1px rgba(233,180,76,.4)}
+.tile .ic{font-size:22px;line-height:1}
+.tile .t{font-weight:700}
+.tile .d{font-size:12px;color:var(--mut)}
+.opc{margin-top:12px;display:none}
+.opc.on{display:block}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--mut);font-weight:600}
+input[type=text],input[type=number],textarea,select{background:var(--bg);border:1px solid var(--line);border-radius:9px;color:var(--fg);padding:9px 11px;font:inherit}
+textarea{resize:vertical;min-height:90px;width:100%}
+input:focus,textarea:focus,select:focus{outline:2px solid rgba(233,180,76,.45);border-color:var(--gold)}
+.imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:10px}
+.img{background:var(--s2);border:2px solid transparent;border-radius:10px;padding:6px;text-align:center;font-size:11px;color:var(--mut)}
+.img img{width:100%;height:96px;object-fit:cover;border-radius:6px;display:block;margin-bottom:5px;background:#000}
+.img.sel{border-color:var(--gold);color:var(--fg)}
+.prev{background:var(--bg);border:1px dashed #4b3a34;border-radius:12px;padding:14px;white-space:pre-wrap;font-family:"Segoe UI Emoji","Segoe UI",sans-serif;max-height:330px;overflow:auto}
+.prev.err{border-style:solid;border-color:rgba(255,107,85,.5);color:#ffb3a6}
+.prev-imgs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.prev-imgs img{height:110px;border-radius:8px}
+.enviar{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.enviar .nota{color:var(--mut);font-size:12px}
+.liga{background:var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.liga b{display:block}
+.liga .m{color:var(--mut);font-size:12px}
+.barra{height:6px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:6px}
+.barra i{display:block;height:100%;background:var(--gold)}
+.log{font:12px/1.5 Consolas,monospace;display:flex;flex-direction:column;gap:2px}
+.log div{color:#cbbab2;word-break:break-word}
+.log div.e{color:var(--err)}
+.log div span{color:#6f5f58;margin-right:6px}
+.cola{font-size:12px;color:var(--mut)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:#1f3a29;border:1px solid var(--ok);color:#d7ffe5;padding:11px 18px;border-radius:12px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:50}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.err{background:#3a1f1b;border-color:var(--err);color:#ffd6cf}
+.velo{position:fixed;inset:0;background:rgba(8,5,4,.86);display:none;place-items:center;z-index:40;backdrop-filter:blur(3px)}
+.velo.on{display:grid}
+.modal{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:26px 28px;width:min(560px,92vw);max-height:90vh;overflow:auto}
+.modal h3{margin:0 0 6px;font-size:20px}
+.modal p{color:var(--mut);margin:0 0 14px}
+.codigo{font:700 44px/1 Consolas,monospace;letter-spacing:.12em;color:var(--gold);text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:22px 10px;margin:8px 0 16px}
+.qr{display:block;margin:6px auto 16px;width:260px;border-radius:12px;background:#fff;padding:8px}
+ol.pasos{margin:0 0 4px;padding-left:20px;color:#d9ccc5}
+ol.pasos li{margin:4px 0}
+.fila{display:flex;gap:12px;flex-wrap:wrap}
+.fila>*{flex:1;min-width:160px}
+.modal .f{margin-bottom:12px}
+.modal .acc{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.ruta{font:12px Consolas,monospace;color:var(--mut);word-break:break-all;background:var(--bg);padding:8px 10px;border-radius:8px;margin:4px 0 12px}
+.vinc-btns{display:flex;gap:10px;justify-content:center;margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="">
+  <h1><small>Cafetería El Desafío</small>Bot de la Liga</h1>
+  <span class="pill" id="pill"><i></i><span id="pillTxt">Iniciando…</span></span>
+  <span class="sp"></span>
+  <span class="cola" id="cola"></span>
+  <div class="hdr-btns">
+    <button class="btn pausa" id="btnPausa" type="button" title="Las mesas, resultados y standing se publican solos en los grupos de la liga. Aquí los pausas.">⏸ Pausar automáticos</button>
+    <button class="btn" id="btnAjustes" type="button">⚙ Ajustes</button>
+  </div>
+</header>
+<main>
+  <section class="col">
+    <div class="card grow">
+      <h2>Grupos <span class="sp"></span><button class="btn ghost" id="btnGrupos" type="button" title="Volver a buscar los grupos">↻</button></h2>
+      <div class="scroll lista" id="grupos"><div class="vacio">Conectando con WhatsApp…</div></div>
+    </div>
+  </section>
+  <section class="col scroll">
+    <div class="card">
+      <div class="paso"><b>1</b><span id="grupoSel">Elige un grupo a la izquierda</span></div>
+      <div class="paso" style="margin-top:14px"><b>2</b><span>Liga</span></div>
+      <div class="chips" id="ligas"></div>
+    </div>
+    <div class="card">
+      <div class="paso"><b>3</b><span>¿Qué quieres mandar?</span></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="opc" id="opc-5"><label class="f" style="max-width:260px">Cuántos jugadores mostrar (0 = todos)<input type="number" id="nStanding" min="0" max="99" placeholder="Por defecto"></label></div>
+      <div class="opc" id="opc-8">
+        <div class="imgs" id="imgs"></div>
+        <label class="f">Texto que acompaña la imagen (puedes cambiarlo o dejarlo vacío)<textarea id="capImg" rows="4"></textarea></label>
+        <div style="margin-top:8px"><button class="btn ghost" type="button" id="btnCarpetaImg">📂 Abrir la carpeta de imágenes</button></div>
+      </div>
+      <div class="opc" id="opc-7"><label class="f">Tu mensaje<textarea id="txtLibre" rows="6" placeholder="Escribe lo que quieras mandar al grupo…"></textarea></label></div>
+    </div>
+    <div class="card">
+      <div class="paso"><b>4</b><span>Vista previa</span></div>
+      <div class="prev" id="prev">Elige un grupo, la liga y el mensaje.</div>
+      <div class="prev-imgs" id="prevImgs"></div>
+      <div class="enviar"><button class="btn pri big" id="btnEnviar" type="button" disabled>Enviar</button><span class="nota" id="notaEnviar"></span></div>
+    </div>
+  </section>
+  <section class="col">
+    <div class="card">
+      <h2>Ligas ahora <span class="sp"></span><button class="btn ghost" id="btnEstado" type="button" title="Actualizar">↻</button></h2>
+      <div id="estado"><div class="vacio">Esperando conexión…</div></div>
+    </div>
+    <div class="card grow">
+      <h2>Registro</h2>
+      <div class="scroll log" id="log"></div>
+    </div>
+  </section>
+</main>
+
+<div class="velo" id="vVinc"><div class="modal">
+  <h3>Vincular el WhatsApp del bot</h3>
+  <p>Solo la primera vez (o si se desvinculó). Usa el celular que tiene el número del bot.</p>
+  <div class="codigo" id="vCodigo" hidden></div>
+  <img class="qr" id="vQr" alt="Código QR para vincular" hidden>
+  <ol class="pasos" id="vPasos"></ol>
+  <div class="vinc-btns"><button class="btn" type="button" id="vAjustes">Cambiar el número del bot</button></div>
+</div></div>
+
+<div class="velo" id="vAj"><div class="modal">
+  <h3>Ajustes</h3>
+  <p>Los cambios se guardan en config.json de la carpeta del bot y el bot se reinicia solo.</p>
+  <label class="f">Número del celular del bot (para vincular con código; vacío = código QR)<input type="text" id="aNumero" placeholder="+56 9 1234 5678"></label>
+  <label class="f">Grupo de la Liga Precon (link de invitación o nombre exacto)<input type="text" id="aPrecon" placeholder="https://chat.whatsapp.com/…"></label>
+  <label class="f">Grupo de la Liga Bracket 3 (link de invitación o nombre exacto)<input type="text" id="aB3" placeholder="https://chat.whatsapp.com/…"></label>
+  <label class="f">Chat de testeo (opcional: número o link)<input type="text" id="aTest" placeholder="+56 9 …"></label>
+  <div class="fila">
+    <label class="f">Ligas que maneja el bot<select id="aLiga"><option value="ambas">Las dos</option><option value="precon">Solo Precon</option><option value="b3">Solo Bracket 3</option></select></label>
+    <label class="f">Jugadores en el standing<input type="number" id="aTop" min="0" max="99"></label>
+    <label class="f">Mesas como<select id="aMesas"><option value="imagen">Imágenes</option><option value="texto">Texto</option></select></label>
+  </div>
+  <label class="f" style="margin-top:6px">Carpeta del bot</label>
+  <div class="ruta" id="aCarpeta"></div>
+  <div class="fila" style="margin-bottom:6px">
+    <button class="btn" type="button" id="aAbrir">📂 Abrir carpeta</button>
+    <button class="btn" type="button" id="aCambiar">Cambiar carpeta…</button>
+    <button class="btn" type="button" id="aReiniciar">↻ Reiniciar bot</button>
+    <button class="btn" type="button" id="aDesv">Desvincular WhatsApp</button>
+  </div>
+  <div class="acc"><button class="btn" type="button" id="aCancelar">Cancelar</button><button class="btn pri" type="button" id="aGuardar">Guardar</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const TIPOS = [
+  {op:"3", ic:"📝", t:"Inscripción", d:"Mensaje para inscribirse"},
+  {op:"1", ic:"🃏", t:"Mesas", d:"Mesas de la ronda actual"},
+  {op:"5", ic:"🏆", t:"Standing", d:"Tabla de la fecha"},
+  {op:"4", ic:"⚔️", t:"Resultados", d:"Mesas reportadas de la ronda"},
+  {op:"6", ic:"🥇", t:"Podio", d:"Podio de la fecha"},
+  {op:"8", ic:"🖼️", t:"Imágenes", d:"Código de la mesa, cómo reportar…"},
+  {op:"gif", ic:"☀️", t:"GIF buen día", d:"Saludo animado"},
+  {op:"7", ic:"✍️", t:"Mensaje libre", d:"Escribe lo que quieras"}
+];
+let estado = "conectando", grupos = [], ligas = [], sel = {grupo:null, liga:null, op:null, imagen:null}, imgsData = null, listo = false, pausado = false, prevOk = false, tPrev = null, enviandoAhora = false;
+
+function toast(t, err){ const e = $("toast"); e.textContent = t; e.className = "toast on" + (err ? " err" : ""); clearTimeout(toast.t); toast.t = setTimeout(() => e.className = "toast" + (err ? " err" : ""), 3200); }
+function pill(s, t){
+  const p = $("pill"), map = {conectando:["warn","Conectando con WhatsApp…"], autenticado:["warn","Sesión guardada, cargando…"], conectado:["warn","Conectado, preparando…"], listo:["ok","Conectado"], vincular:["warn","Falta vincular WhatsApp"], reiniciando:["warn","Reiniciando…"], desconectado:["err","Desconectado"], fallo:["err","No se pudo iniciar sesión"], error:["err","Error"]};
+  const [c, txt] = map[s] || ["", s]; p.className = "pill " + c; $("pillTxt").textContent = t && (s === "error" || s === "reiniciando") ? txt : txt;
+  p.title = t || "";
+}
+function verVinculo(d){
+  const v = $("vVinc");
+  if (d.s !== "vincular"){ v.classList.remove("on"); return; }
+  v.classList.add("on");
+  const c = $("vCodigo"), q = $("vQr");
+  if (d.code){ c.hidden = false; c.textContent = d.code; q.hidden = true;
+    $("vPasos").innerHTML = "<li>En el celular del bot abre WhatsApp → <b>Dispositivos vinculados</b> → <b>Vincular un dispositivo</b>.</li><li>Toca <b>Vincular con el número de teléfono</b> (abajo).</li><li>Escribe este código. Si vence, aparece uno nuevo solo.</li>"; }
+  else if (d.qr){ q.hidden = false; q.src = d.qr; c.hidden = true;
+    $("vPasos").innerHTML = "<li>En el celular del bot abre WhatsApp → <b>Dispositivos vinculados</b> → <b>Vincular un dispositivo</b>.</li><li>Escanea este código QR.</li><li>¿Prefieres un código de 8 letras? Pon el número del bot en Ajustes.</li>"; }
+}
+function setEstado(d){
+  estado = d.s; pill(d.s, d.t); verVinculo(d);
+  if (d.s === "listo"){ listo = true; if (d.pausado != null) setPausa(d.pausado); cargarGrupos(); cargarLigas(); cargarEstado(); }
+  else if (["reiniciando","desconectado","conectando","error"].includes(d.s)) { listo = false; if (d.t) toast(d.t, d.s !== "reiniciando" && d.s !== "conectando"); }
+  actualizarEnviar();
+}
+function setPausa(v){ pausado = !!v; const b = $("btnPausa"); b.classList.toggle("on", pausado); b.textContent = pausado ? "▶ Reanudar automáticos" : "⏸ Pausar automáticos"; }
+function addLog(l){
+  const box = $("log"), abajo = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const d = document.createElement("div"); if (l.err) d.className = "e"; d.innerHTML = `<span>${esc(l.h)}</span>${esc(l.t)}`; box.appendChild(d);
+  while (box.children.length > 300) box.firstChild.remove();
+  if (abajo) box.scrollTop = box.scrollHeight;
+}
+
+async function cargarGrupos(forzar){
+  if (!listo) return;
+  $("grupos").innerHTML = '<div class="vacio">Buscando grupos…</div>';
+  const r = await bot.pedir("grupos", {forzar: !!forzar});
+  if (r && r.error){ $("grupos").innerHTML = `<div class="vacio">${esc(r.error)}</div>`; return; }
+  grupos = r || []; pintarGrupos();
+}
+function pintarGrupos(){
+  $("grupos").innerHTML = grupos.length ? grupos.map(g => {
+    const tag = g.liga ? `<span class="tag${/_test$/.test(g.liga) ? " test" : ""}">${/_test$/.test(g.liga) ? "Testeo" : g.liga === "b3" ? "B3" : "Precon"}</span>` : "";
+    return `<button type="button" class="grupo${sel.grupo && sel.grupo.id === g.id ? " sel" : ""}" data-g="${esc(g.id)}"><span class="av">${esc((g.nombre || "?").trim().charAt(0).toUpperCase())}</span><span class="nm" title="${esc(g.nombre)}">${esc(g.nombre)}</span>${tag}</button>`;
+  }).join("") : '<div class="vacio">No encontré grupos. Toca ↻ en un minuto (WhatsApp tarda en cargar los chats).</div>';
+}
+async function cargarLigas(){ const r = await bot.pedir("ligas"); if (Array.isArray(r)){ ligas = r; if (!sel.liga || !ligas.some(l => l.id === sel.liga)) sel.liga = ligas[0] && ligas[0].id; pintarLigas(); } }
+function pintarLigas(){
+  $("ligas").innerHTML = ligas.map(l => `<button type="button" class="chip${sel.liga === l.id ? " sel" : ""}" data-l="${esc(l.id)}">${esc(l.nombre)}</button>`).join("") || '<span class="vacio">Sin ligas</span>';
+}
+function pintarTiles(){
+  $("tiles").innerHTML = TIPOS.map(x => `<button type="button" class="tile${sel.op === x.op ? " sel" : ""}" data-op="${x.op}"><span class="ic">${x.ic}</span><span class="t">${x.t}</span><span class="d">${x.d}</span></button>`).join("");
+  ["5","8","7"].forEach(o => $("opc-" + o).classList.toggle("on", sel.op === o));
+}
+async function cargarEstado(){
+  if (!listo) return;
+  const r = await bot.pedir("estado");
+  if (!Array.isArray(r)) return;
+  $("estado").innerHTML = r.map(l => l.sinDatos ? `<div class="liga"><b>${esc(l.nombre)}</b><span class="m">Sin datos todavía</span></div>` :
+    `<div class="liga"><b>${esc(l.nombre)} · ${esc(l.fecha)}</b><span class="m">${esc(l.fase)} · ${l.jugadores} jugadores${l.ronda ? ` · Ronda ${l.ronda.n} de ${l.ronda.de}: ${l.ronda.reportadas}/${l.ronda.mesas} mesas` : ""}</span>${l.ronda ? `<div class="barra"><i style="width:${l.ronda.mesas ? Math.round(l.ronda.reportadas / l.ronda.mesas * 100) : 0}%"></i></div>` : ""}<span class="m" style="display:block;margin-top:4px">${l.grupo ? "Publica solo en: " + esc(l.grupo) : "Sin grupo configurado (solo envíos a mano)"}</span></div>`).join("") || '<div class="vacio">Sin ligas</div>';
+}
+async function cargarImagenes(){
+  const r = await bot.pedir("imagenes", {liga: sel.liga});
+  if (!r || r.error) return;
+  imgsData = r;
+  if (!r.imagenes.some(i => i.nombre === sel.imagen)) { sel.imagen = r.imagenes[0] && r.imagenes[0].nombre; const i = r.imagenes[0]; $("capImg").value = i ? i.caption : ""; }
+  $("imgs").innerHTML = r.imagenes.map(i => `<button type="button" class="img${sel.imagen === i.nombre ? " sel" : ""}" data-img="${esc(i.nombre)}"><img src="${esc(fileUrl(i.archivo))}" alt="">${esc(i.nombre)}</button>`).join("") || `<div class="vacio">No hay imágenes en ${esc(r.carpeta)}</div>`;
+}
+const fileUrl = p => "file:///" + String(p).replace(/\\/g, "/").replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/").replace(/^([A-Za-z])%3A/, "$1:");
+function args(){
+  const a = {op: sel.op, liga: sel.liga, grupoId: sel.grupo && sel.grupo.id, grupoNombre: sel.grupo && sel.grupo.nombre};
+  if (sel.op === "5"){ const v = $("nStanding").value.trim(); if (v !== "") a.n = parseInt(v, 10) || 0; }
+  if (sel.op === "8"){ a.imagen = sel.imagen; a.caption = $("capImg").value; }
+  if (sel.op === "7") a.texto = $("txtLibre").value;
+  return a;
+}
+function actualizarEnviar(){
+  const b = $("btnEnviar");
+  b.disabled = !(listo && sel.grupo && sel.liga && sel.op && prevOk) || enviandoAhora;
+  b.textContent = sel.grupo ? `Enviar a “${sel.grupo.nombre}”` : "Enviar";
+  $("notaEnviar").textContent = !listo ? "Esperando que el bot se conecte." : !sel.grupo ? "Elige un grupo." : !sel.op ? "Elige qué mandar." : "";
+}
+function previa(){ clearTimeout(tPrev); tPrev = setTimeout(hacerPrevia, 250); }
+async function hacerPrevia(){
+  prevOk = false; actualizarEnviar();
+  const p = $("prev"); p.classList.remove("err"); $("prevImgs").innerHTML = "";
+  if (!sel.grupo || !sel.liga || !sel.op){ p.textContent = "Elige un grupo, la liga y el mensaje."; return; }
+  if (!listo){ p.textContent = "Esperando que el bot se conecte…"; return; }
+  if (sel.op === "7" && !$("txtLibre").value.trim()){ p.textContent = "Escribe tu mensaje arriba."; return; }
+  p.textContent = "Armando el mensaje…";
+  const r = await bot.pedir("preparar", args());
+  if (!r || r.error){ p.classList.add("err"); p.textContent = (r && r.error || "No se pudo armar el mensaje.").trim(); return; }
+  p.textContent = (r.mesas ? "Se mandan como imágenes (una por mesa) con este texto:\n\n" : "") + r.preview;
+  $("prevImgs").innerHTML = (r.archivos || []).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).map(f => `<img src="${esc(fileUrl(f))}" alt="">`).join("");
+  prevOk = true; actualizarEnviar();
+}
+async function enviar(){
+  if (!prevOk || enviandoAhora) return;
+  enviandoAhora = true; actualizarEnviar();
+  const r = await bot.pedir("enviar", args());
+  enviandoAhora = false; actualizarEnviar();
+  if (!r || r.error) return toast(r && r.error || "No se pudo enviar.", true);
+  toast(`✓ Enviando ${r.que} a “${r.grupo}”`);
+  if (sel.op === "7") { $("txtLibre").value = ""; previa(); }
+}
+
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-g]"); if (g){ sel.grupo = grupos.find(x => x.id === g.dataset.g) || null; if (sel.grupo && sel.grupo.liga && ligas.some(l => l.id === sel.grupo.liga)) sel.liga = sel.grupo.liga; $("grupoSel").textContent = sel.grupo ? sel.grupo.nombre : "Elige un grupo a la izquierda"; pintarGrupos(); pintarLigas(); if (sel.op === "8") cargarImagenes(); previa(); return; }
+  const l = e.target.closest("[data-l]"); if (l){ sel.liga = l.dataset.l; pintarLigas(); if (sel.op === "8") cargarImagenes(); previa(); return; }
+  const o = e.target.closest("[data-op]"); if (o){ sel.op = o.dataset.op; pintarTiles(); if (sel.op === "8") cargarImagenes().then(previa); else previa(); if (sel.op === "7") setTimeout(() => $("txtLibre").focus(), 50); return; }
+  const im = e.target.closest("[data-img]"); if (im){ sel.imagen = im.dataset.img; const i = imgsData && imgsData.imagenes.find(x => x.nombre === sel.imagen); $("capImg").value = i ? i.caption : ""; document.querySelectorAll("[data-img]").forEach(b => b.classList.toggle("sel", b.dataset.img === sel.imagen)); previa(); return; }
+});
+["nStanding","capImg","txtLibre"].forEach(id => $(id).addEventListener("input", previa));
+$("btnEnviar").addEventListener("click", enviar);
+$("btnGrupos").addEventListener("click", () => cargarGrupos(true));
+$("btnEstado").addEventListener("click", cargarEstado);
+$("btnPausa").addEventListener("click", async () => { const r = await bot.pedir("pausa", {valor: !pausado}); if (r && !r.error){ setPausa(r.pausado); toast(r.pausado ? "Mensajes automáticos en pausa" : "Mensajes automáticos reanudados"); } else toast(r && r.error || "No se pudo", true); });
+$("btnCarpetaImg").addEventListener("click", () => bot.abrirCarpeta("imagenes-para-enviar"));
+
+// Ajustes
+async function abrirAjustes(){
+  const c = await bot.configLeer(), ini = await bot.inicio(), g = c.grupos || {};
+  $("aNumero").value = c.numeroBot || ""; $("aPrecon").value = /NOMBRE EXACTO/.test(g.precon || "") ? "" : (g.precon || ""); $("aB3").value = /NOMBRE EXACTO/.test(g.b3 || "") ? "" : (g.b3 || "");
+  $("aTest").value = g.precon_test || g.b3_test || ""; $("aTop").value = c.top == null ? 10 : c.top; $("aMesas").value = c.mesasComo || "imagen"; $("aLiga").value = ini.liga || "ambas";
+  $("aCarpeta").textContent = ini.carpeta || "";
+  $("vAj").classList.add("on");
+}
+$("btnAjustes").addEventListener("click", abrirAjustes);
+$("vAjustes").addEventListener("click", abrirAjustes);
+$("aCancelar").addEventListener("click", () => $("vAj").classList.remove("on"));
+$("aGuardar").addEventListener("click", async () => {
+  const t = $("aTest").value.trim();
+  await bot.configGuardar({ liga: $("aLiga").value, config: { numeroBot: $("aNumero").value.trim(), top: parseInt($("aTop").value, 10) || 0, mesasComo: $("aMesas").value,
+    grupos: { precon: $("aPrecon").value.trim(), b3: $("aB3").value.trim(), precon_test: t, b3_test: t } } });
+  $("vAj").classList.remove("on"); listo = false; toast("Ajustes guardados. Reiniciando el bot…");
+});
+$("aAbrir").addEventListener("click", () => bot.abrirCarpeta());
+$("aCambiar").addEventListener("click", async () => { const d = await bot.cambiarCarpeta(); $("aCarpeta").textContent = d; listo = false; });
+$("aReiniciar").addEventListener("click", async () => { $("vAj").classList.remove("on"); listo = false; await bot.reiniciar(); });
+$("aDesv").addEventListener("click", async () => { const r = await bot.desvincular(); if (r && r.ok){ $("vAj").classList.remove("on"); listo = false; } });
+
+bot.on("estado", setEstado);
+bot.on("log", addLog);
+bot.on("cola", m => { $("cola").textContent = m.n ? `${m.n} ${m.n === 1 ? "mensaje" : "mensajes"} en cola${m.enviando ? " · enviando…" : ""}` : ""; if (m.pausado !== pausado) setPausa(m.pausado); });
+bot.on("carpeta", d => { $("aCarpeta").textContent = d; });
+setInterval(() => { if (listo) cargarEstado(); }, 20000);
+(async () => {
+  pintarTiles(); actualizarEnviar();
+  const i = await bot.inicio();
+  (i.logs || []).forEach(addLog);
+  if (i.estado) setEstado({s: i.estado, code: i.code, qr: i.qr});
+})();
+</script>
+</body>
+</html>

@@ -13,12 +13,22 @@ const path = require("path");
 const { anunciar, textoInscripcion, msgMesas, textoResultados, textoStanding, textoCierre, urlPortal, NOMBRE_LIGA } = require("./anuncios");
 const { imagenesMesas } = require("./imagenes");
 
-const DIR = __dirname;
-const CFG_FILE = path.join(DIR, "config.json");
-const MEM_FILE = path.join(DIR, "memoria.json");
-if (!fs.existsSync(CFG_FILE)) { console.error("Falta config.json: copia config.ejemplo.json como config.json y complétalo."); process.exit(1); }
-const CFG = JSON.parse(fs.readFileSync(CFG_FILE, "utf8"));
+const DIR = __dirname;                                  // código del bot (anuncios, imágenes, estilos)
+const DATOS = process.env.BOT_DATOS || __dirname;       // config.json, memoria, sesión de WhatsApp (en la app de escritorio, la carpeta elegida)
 const ARG = process.argv.slice(2);
+// Modo app de escritorio: la ventana manda las órdenes y recibe los avisos por un canal interno (en vez del menú en la consola)
+const APP = ARG.includes("--app") && typeof process.send === "function";
+if (APP) {
+  const enviarApp = (ev) => { try { process.send(ev); } catch (e) {} };
+  const orig = { log: console.log, error: console.error };
+  console.log = (...a) => { orig.log(...a); enviarApp({ ev: "log", t: a.map(String).join(" ") }); };
+  console.error = (...a) => { orig.error(...a); enviarApp({ ev: "log", t: a.map(String).join(" "), err: true }); };
+}
+const avisarApp = ev => { if (APP) { try { process.send(ev); } catch (e) {} } };
+const CFG_FILE = path.join(DATOS, "config.json");
+const MEM_FILE = path.join(DATOS, "memoria.json");
+if (!fs.existsSync(CFG_FILE) && !ARG.includes("--solo-parche")) { console.error("Falta config.json: copia config.ejemplo.json como config.json y complétalo."); avisarApp({ ev: "error", t: "Falta config.json en la carpeta del bot." }); process.exit(1); }
+const CFG = fs.existsSync(CFG_FILE) ? JSON.parse(fs.readFileSync(CFG_FILE, "utf8")) : {};
 // Navegador para WhatsApp Web: el de config.json, el que descarga puppeteer o, si no está, el Chrome o Edge instalado en el PC
 function buscarNavegador() {
   const existe = f => { try { return !!f && fs.existsSync(f); } catch (e) { return false; } };
@@ -209,13 +219,17 @@ async function iniciar() {
   console.log(`${hora()} Bot listo. Revisando la liga cada ${CFG.cadaSegundos || 15} s.`);
   await revisar();
   setInterval(revisar, (CFG.cadaSegundos || 15) * 1000);
-  iniciarMenu();
+  if (APP) iniciarApp(); else iniciarMenu();
 }
 
 // ---------- Menú de comandos (se escribe el número en la ventana del bot) ----------
 // Menú principal: se elige el grupo. Dentro del grupo: se elige qué mensaje mandar (0 = volver).
 let pausado = false, gruposMenu = null;
-const DIR_IMG = path.join(DIR, "imagenes-para-enviar");
+const DIR_IMG = path.join(DATOS, "imagenes-para-enviar");
+// Imágenes: las de la carpeta del bot y, si falta alguna, las que vienen incluidas con el programa
+const DIRS_IMG = [...new Set([DIR_IMG, path.join(DIR, "imagenes-para-enviar")])].filter(d => { try { return fs.statSync(d).isDirectory(); } catch (e) { return false; } });
+const rutaImg = f => { for (const d of DIRS_IMG) { const r = path.join(d, f); if (fs.existsSync(r)) return r; } return path.join(DIR_IMG, f); };
+const archivosImg = () => [...new Set(DIRS_IMG.flatMap(d => { try { return fs.readdirSync(d); } catch (e) { return []; } }))];
 // Texto fijo del GIF de buen día
 const TEXTO_GIF = "☀️ ¡Buen día, grupo! 😎";
 // Texto que acompaña por defecto a algunas imágenes (por nombre de archivo)
@@ -286,9 +300,9 @@ async function mostrarMenu(forzar) {
 }
 async function leerDatos(liga) {
   let datos;
-  try { datos = await leerLiga(); } catch (e) { console.error("No se pudo leer la liga:", e.message); return null; }
+  try { datos = await leerLiga(); } catch (e) { nota("No se pudo leer la liga: " + e.message); return null; }
   const S = datos[LIGAS[liga].estado], cal = datos[LIGAS[liga].cal] || {};
-  if (!S || !S.players) { console.log(`${NOMBRE_LIGA[liga]} todavía no tiene datos.`); return null; }
+  if (!S || !S.players) { nota(`${NOMBRE_LIGA[liga]} todavía no tiene datos.`); return null; }
   const ri = Math.max(0, Math.min(S.cur | 0, (S.rounds || []).length - 1));
   const ronda = (S.rounds || [])[ri];
   return { S, cal, ri, ronda, hayMesas: !!(ronda && ronda.tables && ronda.tables.length), fecha: S.fecha ? S.fecha.split("-").reverse().join("/") : "sin fecha", top: cal.topPublico == null ? (CFG.top || 10) : cal.topPublico };
@@ -316,7 +330,14 @@ async function verFecha() {
   console.log(`  Mensajes en espera: ${cola.length}${pausado ? " · automáticos EN PAUSA" : ""}`);
 }
 // Arma el mensaje de la opción elegida. Devuelve {msgs, que, liga, mesas} o null si no se puede.
-async function armarMensaje(op, grupo, ligaSel) {
+let notaApp = "";
+const nota = t => { console.log(t); notaApp = String(t).trim(); };
+async function armarMensaje(op, grupo, ligaSel, opc) {
+  if (op === "7" && opc) {
+    const t = String(opc.texto || "").trim();
+    if (!t) { nota("  Mensaje vacío, no se envía."); return null; }
+    return { msgs: [t], que: "tu mensaje", liga: ligaSel || ligaDeGrupo(grupo.id) || "grupo" };
+  }
   if (op === "7") {
     console.log("  Escribe el mensaje. Para varias líneas, termina con una línea que tenga solo un punto ( . ):");
     const ls = [];
@@ -326,8 +347,8 @@ async function armarMensaje(op, grupo, ligaSel) {
     return { msgs: [t], que: "tu mensaje", liga: ligaSel || ligaDeGrupo(grupo.id) || "grupo" };
   }
   if (op === "gif") {
-    const f = path.join(DIR_IMG, "buen-dia.mp4");
-    if (!fs.existsSync(f)) { console.log(`  Falta el archivo buen-dia.mp4 en la carpeta ${DIR_IMG}`); return null; }
+    const f = rutaImg("buen-dia.mp4");
+    if (!fs.existsSync(f)) { nota(`  Falta el archivo buen-dia.mp4 en la carpeta ${DIR_IMG}`); return null; }
     return { msgs: [{ tipo: "imagen", archivo: f, caption: TEXTO_GIF, soloGif: true }], que: "el GIF de buen día", liga: ligaSel || ligaDeGrupo(grupo.id) || "grupo" };
   }
   if (op === "8") {
@@ -335,9 +356,16 @@ async function armarMensaje(op, grupo, ligaSel) {
     // Las imágenes que terminan en "-precon" o "-b3" solo aparecen en esa liga
     const base = String(ligaSel || ligaDeGrupo(grupo.id) || "").replace("_test", "");
     const otra = base === "precon" ? /-b3\.[a-z]+$/i : base === "b3" ? /-precon\.[a-z]+$/i : null;
-    const todos = fs.readdirSync(DIR_IMG);
+    const todos = archivosImg();
     const arch = todos.filter(f => /\.(jpe?g|png|webp)$/i.test(f) && !(otra && otra.test(f))).sort();
-    if (!arch.length) { console.log(`  No hay imágenes. Copia la imagen en la carpeta: ${DIR_IMG}`); return null; }
+    if (!arch.length) { nota(`  No hay imágenes. Copia la imagen en la carpeta: ${DIR_IMG}`); return null; }
+    if (opc) {
+      const f = arch.find(x => x === opc.imagen);
+      if (!f) { nota("  Elige una imagen."); return null; }
+      const def = TEXTO_IMAGEN[f.toLowerCase().replace(/\.[a-z0-9]+$/, "")] || "";
+      const cap = opc.caption == null ? def : String(opc.caption);
+      return { msgs: [{ tipo: "imagen", archivo: rutaImg(f), caption: cap.trim() }], que: `la imagen ${f}`, liga: ligaSel || ligaDeGrupo(grupo.id) || "grupo" };
+    }
     arch.forEach((f, i) => console.log(`    ${i + 1}) ${f}`));
     const r = await leerLinea("  ¿Qué imagen? (número, Enter = cancelar): ");
     const f = arch[(parseInt(r, 10) || 0) - 1];
@@ -347,13 +375,13 @@ async function armarMensaje(op, grupo, ligaSel) {
     if (def) console.log(`\n  Texto por defecto:\n${def.split("\n").map(x => "    " + x).join("\n")}\n`);
     const cap = await leerLinea(def ? "  Texto que acompaña la imagen (Enter = texto por defecto, - = sin texto, o escribe otro): " : "  Texto que acompaña la imagen (Enter = sin texto): ");
     const t = (cap || "").trim();
-    return { msgs: [{ tipo: "imagen", archivo: path.join(DIR_IMG, f), caption: t === "-" ? "" : t || def }], que: `la imagen ${f}`, liga: ligaSel || ligaDeGrupo(grupo.id) || "grupo" };
+    return { msgs: [{ tipo: "imagen", archivo: rutaImg(f), caption: t === "-" ? "" : t || def }], que: `la imagen ${f}`, liga: ligaSel || ligaDeGrupo(grupo.id) || "grupo" };
   }
   const liga = ligaSel || await elegirLigaDatos(grupo); if (!liga) return null;
   const d = await leerDatos(liga); if (!d) return null;
   const { S, ri, hayMesas, fecha, top } = d;
   if (op === "1" || op === "2") {
-    if (S.phase === "inscripcion" || !hayMesas) { console.log("  Todavía no hay mesas armadas en esta liga."); return null; }
+    if (S.phase === "inscripcion" || !hayMesas) { nota("  Todavía no hay mesas armadas en esta liga."); return null; }
     const m = msgMesas(liga, S, ri);
     return { msgs: [op === "1" ? m : m.respaldo], que: `las mesas de la ronda ${ri + 1}`, liga, S, mesas: ri };
   }
@@ -363,17 +391,17 @@ async function armarMensaje(op, grupo, ligaSel) {
   }
   if (op === "4") {
     const t = hayMesas && S.phase !== "inscripcion" && textoResultados(liga, S, ri);
-    if (!t) { console.log(`  Todavía no hay mesas reportadas en la ronda ${ri + 1}.`); return null; }
+    if (!t) { nota(`  Todavía no hay mesas reportadas en la ronda ${ri + 1}.`); return null; }
     return { msgs: [t], que: `los resultados de la ronda ${ri + 1}`, liga, S };
   }
   if (op === "5") {
-    if (S.phase === "inscripcion") { console.log("  La fecha todavía no empieza: no hay standing."); return null; }
-    const r = await leerLinea(`  ¿Cuántos jugadores mostrar? (Enter = ${top || "todos"}, 0 = todos): `);
+    if (S.phase === "inscripcion") { nota("  La fecha todavía no empieza: no hay standing."); return null; }
+    const r = opc ? (opc.n == null ? "" : String(opc.n)) : await leerLinea(`  ¿Cuántos jugadores mostrar? (Enter = ${top || "todos"}, 0 = todos): `);
     const n = r === null || r.trim() === "" ? top : (parseInt(r, 10) || 0);
     return { msgs: [textoStanding(S, `${NOMBRE_LIGA[liga]} · Standing${S.fecha ? " " + fecha : ""}`, n) + (CFG.portal ? `\n\nStanding completo: ${urlPortal(liga, CFG.portal)}` : "")], que: "el standing", liga, S };
   }
   if (op === "6") {
-    if (S.phase === "inscripcion") { console.log("  La fecha todavía no empieza."); return null; }
+    if (S.phase === "inscripcion") { nota("  La fecha todavía no empieza."); return null; }
     let t = textoCierre(S, liga, top, urlPortal(liga, CFG.portal));
     if (!S.closedSig) t = t.replace("· Fecha cerrada*", "· Podio parcial*");   // la fecha aún no se cierra
     return { msgs: [t], que: "el podio de la fecha", liga, S };
@@ -440,6 +468,57 @@ async function comando(op) {
   if (!g || !/^\d+$/.test(op)) { aviso = `  No existe la opción "${op}".`; return mostrarMenu(); }
   return menuGrupo(g);
 }
+// ---------- Órdenes desde la app de escritorio ----------
+async function estadoLigas() {
+  const out = [];
+  for (const l of ligasConDatos()) {
+    const d = await leerDatos(l);
+    if (!d) { out.push({ liga: l, nombre: (NOMBRE_LIGA[l] || l).replace("🧪 ", ""), sinDatos: true }); continue; }
+    const { S, ri, ronda, hayMesas, fecha } = d;
+    out.push({ liga: l, nombre: (NOMBRE_LIGA[l] || l).replace("🧪 ", ""), fecha, jugadores: S.players.length,
+      fase: S.phase === "inscripcion" ? "Inscripciones abiertas" : S.closedSig ? "Fecha cerrada" : "Jugando",
+      ronda: hayMesas && S.phase !== "inscripcion" ? { n: ri + 1, de: S.cfg && S.cfg.rounds, reportadas: ronda.tables.filter(t => t.result).length, mesas: ronda.tables.length } : null,
+      grupo: nombresDestino[l] || null });
+  }
+  return out;
+}
+function listarImagenes(liga) {
+  const base = String(liga || "").replace("_test", "");
+  const otra = base === "precon" ? /-b3\.[a-z]+$/i : base === "b3" ? /-precon\.[a-z]+$/i : null;
+  const arch = archivosImg().filter(f => /\.(jpe?g|png|webp)$/i.test(f) && !(otra && otra.test(f))).sort();
+  return { imagenes: arch.map(f => ({ nombre: f, archivo: rutaImg(f), caption: TEXTO_IMAGEN[f.toLowerCase().replace(/\.[a-z0-9]+$/, "")] || "" })),
+    gif: fs.existsSync(rutaImg("buen-dia.mp4")), textoGif: TEXTO_GIF, carpeta: DIR_IMG };
+}
+function iniciarApp() {
+  const resp = (id, data) => avisarApp({ ev: "resp", id, data });
+  process.on("message", async m => {
+    const { id, cmd, a = {} } = m || {};
+    try {
+      if (cmd === "grupos") { const gs = await cargarGruposMenu(!!a.forzar); return resp(id, gs.map(g => ({ id: g.id, nombre: g.nombre, liga: ligaDeGrupo(g.id) }))); }
+      if (cmd === "ligas") return resp(id, ligasConDatos().map(l => ({ id: l, nombre: (NOMBRE_LIGA[l] || l).replace("🧪 ", "") })));
+      if (cmd === "estado") return resp(id, await estadoLigas());
+      if (cmd === "imagenes") return resp(id, listarImagenes(a.liga));
+      if (cmd === "pausa") { pausado = a.valor == null ? !pausado : !!a.valor; console.log(`${hora()} Mensajes automáticos ${pausado ? "en PAUSA" : "reanudados"}.`); return resp(id, { pausado }); }
+      if (cmd === "info") return resp(id, { pausado, cola: cola.length, destinos: nombresDestino });
+      if (cmd === "preparar" || cmd === "enviar") {
+        notaApp = "";
+        const gs = await cargarGruposMenu();
+        const grupo = gs.find(g => g.id === a.grupoId) || { id: a.grupoId, nombre: a.grupoNombre || "grupo" };
+        const r = await armarMensaje(a.op, grupo, a.liga, a);
+        if (!r) return resp(id, { error: notaApp || "No se pudo armar el mensaje." });
+        if (cmd === "preparar") return resp(id, { preview: r.msgs.map(resumen).join("\n\n"), que: r.que, archivos: r.msgs.filter(x => x && x.tipo === "imagen").map(x => x.archivo), mesas: r.mesas != null });
+        if (r.mesas != null && destinos[r.liga] === grupo.id) { const mm = mem[r.liga]; if (mm && mm.fecha === (r.S.fecha || "sin-fecha")) { mm.hecho[`r${r.mesas}:armada`] = 1; guardarMem(mem); } }
+        r.msgs.forEach(msg => cola.push({ liga: r.liga, msg, S: r.S, to: grupo.id }));
+        console.log(`${hora()} Enviando ${r.que} a "${grupo.nombre}".`);
+        procesarCola();
+        return resp(id, { ok: true, que: r.que, grupo: grupo.nombre });
+      }
+      resp(id, { error: "Orden desconocida: " + cmd });
+    } catch (e) { resp(id, { error: String(e && e.message || e).split("\n")[0] }); }
+  });
+  setInterval(() => avisarApp({ ev: "cola", n: cola.length, enviando, pausado }), 2000);
+  avisarApp({ ev: "listo", destinos: nombresDestino, pausado });
+}
 let menuIniciado = false;
 function iniciarMenu() {
   if (menuIniciado || (!process.stdin.isTTY && !ARG.includes("--menu"))) return;
@@ -461,7 +540,7 @@ function iniciarMenu() {
 if (SIMULAR) {
   LIGA_SEL = SEL[(argVal("--liga") || "").toLowerCase()] || null;
   if (ESTADO_ARCH && ARG.includes("--menu")) { (async () => { await revisar(); iniciarMenu(); })(); return; }
-  if (ESTADO_ARCH) { (async () => { await revisar(); while (enviando || cola.length) await espera(200); if (navegador) await navegador.close(); process.exit(0); })(); return; }
+  if (ESTADO_ARCH && !APP) { (async () => { await revisar(); while (enviando || cola.length) await espera(200); if (navegador) await navegador.close(); process.exit(0); })(); return; }
   iniciar(); return;
 }
 
@@ -518,14 +597,15 @@ function parcharWwebjs() {
   try { fs.writeFileSync(f + ".original", src); fs.writeFileSync(f, out); console.log(`${hora()} Parche de compatibilidad con WhatsApp Web aplicado.`); } catch (e) { console.log(`${hora()} No se pudo aplicar el parche de WhatsApp Web: ${e.message}`); }
 }
 parcharWwebjs();
+if (ARG.includes("--solo-parche")) process.exit(0);
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 // Vincular con código (en vez de QR): se usa el número del celular del bot (config.json → "numeroBot")
 const normNumero = v => { const t = String(v || "").replace(/\D/g, ""); return t.length === 9 && t.startsWith("9") ? "56" + t : t; };
-const haySesion = () => { try { return fs.readdirSync(path.join(DIR, "sesion-whatsapp", "session")).length > 0; } catch (e) { return false; } };
+const haySesion = () => { try { return fs.readdirSync(path.join(DATOS, "sesion-whatsapp", "session")).length > 0; } catch (e) { return false; } };
 async function numeroVinculo() {
   const cfg = normNumero(CFG.numeroBot);
-  if (cfg || haySesion() || !process.stdin.isTTY) return cfg;
+  if (cfg || haySesion() || !process.stdin.isTTY || APP) return cfg;
   console.log("\nHay que vincular el WhatsApp del bot (solo la primera vez).");
   console.log("Escribe el número del celular del bot para recibir un CÓDIGO de 8 letras (ej. +56 9 1234 5678).");
   for (;;) {
@@ -542,7 +622,7 @@ async function numeroVinculo() {
 }
 function crearCliente(NUMERO) {
 client = new Client({
-  authStrategy: new LocalAuth({ dataPath: path.join(DIR, "sesion-whatsapp") }),
+  authStrategy: new LocalAuth({ dataPath: path.join(DATOS, "sesion-whatsapp") }),
   ...(NUMERO ? { pairWithPhoneNumber: { phoneNumber: NUMERO, showNotification: true } } : {}),
   // En un servidor Linux (p. ej. ARM de Oracle) se usa el Chromium del sistema: "chromePath": "/usr/bin/chromium"
   puppeteer: { headless: true, executablePath: NAVEGADOR, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"] }
@@ -551,6 +631,7 @@ client.on("qr", qr => {
   console.log("\nEscanea este código con el WhatsApp del número del bot:");
   console.log("WhatsApp → Dispositivos vinculados → Vincular un dispositivo\n");
   qrcode.generate(qr, { small: true });
+  avisarApp({ ev: "qr", qr });
 });
 client.on("code", code => {
   const c = String(code || ""), cod = c.length === 8 ? c.slice(0, 4) + "-" + c.slice(4) : c;
@@ -560,10 +641,11 @@ client.on("code", code => {
   console.log("En el celular del bot abre WhatsApp → Dispositivos vinculados → Vincular un dispositivo");
   console.log("→ toca \"Vincular con el número de teléfono\" (abajo) y escribe el código.");
   console.log("Si el código vence, el bot muestra uno nuevo solo.\n");
+  avisarApp({ ev: "code", code: cod });
 });
-client.on("authenticated", () => console.log(`${hora()} Sesión de WhatsApp guardada.`));
-client.on("auth_failure", m => console.error("No se pudo iniciar sesión en WhatsApp:", m));
-client.on("disconnected", r => { console.error(`${hora()} WhatsApp se desconectó (${r}). Vuelve a abrir el bot.`); process.exit(1); });
+client.on("authenticated", () => { console.log(`${hora()} Sesión de WhatsApp guardada.`); avisarApp({ ev: "estado", s: "autenticado" }); });
+client.on("auth_failure", m => { console.error("No se pudo iniciar sesión en WhatsApp:", m); avisarApp({ ev: "estado", s: "fallo", t: String(m || "") }); });
+client.on("disconnected", r => { console.error(`${hora()} WhatsApp se desconectó (${r}). Vuelve a abrir el bot.`); avisarApp({ ev: "estado", s: "desconectado", t: String(r || "") }); setTimeout(() => process.exit(1), 300); });
 client.on("ready", alListo);
 }
 // Lista de grupos (con reintentos: recién vinculado, WhatsApp tarda en sincronizar los chats)
@@ -628,6 +710,7 @@ async function idDeGrupo(valor, cargar) {
 }
 async function alListo() {
   console.log(`${hora()} WhatsApp conectado.`);
+  avisarApp({ ev: "estado", s: "conectado" });
   await espera(4000);
   let cache;
   const cargar = async () => (cache !== undefined ? cache : (cache = await listarGrupos()));
@@ -651,7 +734,9 @@ async function alListo() {
     if (g) { destinos[liga] = g.id; nombresDestino[liga] = g.nombre; console.log(`${hora()} ${liga} → ${g.nombre}`); }
     else console.error(`${hora()} No encontré el grupo "${valor}" para ${liga}. Revisa el nombre o usa el link de invitación del grupo.`);
   }
-  if (!Object.keys(destinos).length) {
+  if (!Object.keys(destinos).length && APP) {
+    console.log(`${hora()} No hay grupos de la liga configurados: los mensajes automáticos no se mandan, pero puedes enviar a mano a cualquier grupo. Configúralos en Ajustes.`);
+  } else if (!Object.keys(destinos).length) {
     console.error(`No hay grupos configurados. Revisa config.json (se leyó: ${CFG_FILE}).`);
     console.error(`"grupos" dice: ${JSON.stringify(CFG.grupos || {})}`);
     console.error('Debe quedar, por ejemplo:  "precon": "https://chat.whatsapp.com/XXXX",  "b3": "https://chat.whatsapp.com/YYYY"');
@@ -675,11 +760,12 @@ async function iniciarCliente(numero, intento = 1) {
     try { await client.destroy(); } catch (e2) {}
     if (intento < 5 && ERR_ARRANQUE.test(msg)) {
       console.log(`${hora()} WhatsApp Web se recargó mientras el bot se conectaba. Reintentando (${intento}/4)...`);
-      if (intento >= 2) { try { fs.rmSync(path.join(DIR, ".wwebjs_cache"), { recursive: true, force: true }); } catch (e3) {} }
+      if (intento >= 2) { try { fs.rmSync(path.join(DATOS, ".wwebjs_cache"), { recursive: true, force: true }); fs.rmSync(path.join(process.cwd(), ".wwebjs_cache"), { recursive: true, force: true }); } catch (e3) {} }
       await new Promise(r => setTimeout(r, 4000 * intento));
       return iniciarCliente(numero, intento + 1);
     }
     console.error(`${hora()} No se pudo conectar a WhatsApp: ${msg}`);
+    avisarApp({ ev: "error", t: "No se pudo conectar a WhatsApp: " + msg });
     console.error("Cierra esta ventana y vuelve a abrir el bot. Si se repite, borra la carpeta .wwebjs_cache (no la de sesion-whatsapp).");
     process.exit(1);
   }
