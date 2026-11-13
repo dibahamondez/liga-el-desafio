@@ -453,22 +453,24 @@ body.cnt-on{overflow:hidden}
 .cnt-bg{position:absolute;inset:0;display:flex}
 .cnt-bg i{flex:1;background-size:cover;background-position:center;filter:saturate(1.05)}
 .cnt-bg.vacio{background:radial-gradient(circle at 30% 20%,#4a2018,#1a0f0d 70%)}
-.cnt-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.35))}
+.cnt-bg{transition:none}
+.cnt-bg::after{content:"";position:absolute;inset:0;background:#07040a;opacity:.28}
 .cnt-pnl.fuera .cnt-bg{filter:grayscale(1) brightness(.35)}
-.cnt-pnl.atk .cnt-bg::after{background:rgba(10,6,20,.55)}
+.cnt-pnl.atk .cnt-bg::after{opacity:.62}
 .cnt-pnl.victima .cnt-bg{filter:brightness(.3)}
 .cnt-in{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(var(--rot));display:flex;align-items:center;justify-content:center;color:#fff}
 .cnt-nm{position:absolute;top:10px;left:0;right:0;text-align:center;font:700 15px var(--f-display,system-ui);letter-spacing:.06em;text-transform:uppercase;text-shadow:0 2px 6px rgba(0,0,0,.8);pointer-events:none}
-.cnt-num{font:800 clamp(64px,22vmin,170px)/1 var(--f-num,system-ui);text-shadow:0 4px 18px rgba(0,0,0,.6);pointer-events:none;font-variant-numeric:tabular-nums}
+.cnt-num{will-change:transform;font:800 clamp(64px,22vmin,170px)/1 var(--f-num,system-ui);transition:color .25s;text-shadow:0 4px 18px rgba(0,0,0,.6);pointer-events:none;font-variant-numeric:tabular-nums}
 .cnt-num.cmd{font-size:clamp(48px,15vmin,120px)}
 .cnt-num.letal{color:#ff6b55}
-.cnt-in .z{position:absolute;top:0;bottom:0;width:50%;background:transparent;border:0;color:rgba(255,255,255,.55);font:700 34px system-ui;display:flex;align-items:center;padding:0 7%;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cnt-in .z{position:absolute;top:0;bottom:0;width:50%;background:rgba(255,255,255,0);border:0;color:rgba(255,255,255,.55);font:700 34px system-ui;display:flex;align-items:center;padding:0 7%;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .cnt-in .z.zm{left:0;justify-content:flex-start}
 .cnt-in .z.zp{right:0;justify-content:flex-end}
-.cnt-in .z:active{background:rgba(255,255,255,.08)}
-.cnt-delta{position:absolute;top:22%;font:700 26px var(--f-num,system-ui);opacity:0;transition:opacity .2s;text-shadow:0 2px 6px #000;pointer-events:none}
-.cnt-delta.on{opacity:1}
-.cnt-ic{position:absolute;bottom:10px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.45);color:#fff;font-size:17px;display:grid;place-items:center;cursor:pointer;z-index:2}
+.cnt-in .z span{display:inline-block}
+.cnt-delta{position:absolute;top:20%;font:700 26px var(--f-num,system-ui);opacity:0;transform:translateY(8px) scale(.9);transition:opacity .35s ease,transform .45s cubic-bezier(.3,1.5,.5,1),color .2s;text-shadow:0 2px 6px #000;pointer-events:none;color:#9dffb0}
+.cnt-delta.neg{color:#ffb1a3}
+.cnt-delta.on{opacity:1;transform:none}
+.cnt-ic{transition:transform .15s,background .2s;position:absolute;bottom:10px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.45);color:#fff;font-size:17px;display:grid;place-items:center;cursor:pointer;z-index:2}
 .cnt-ic.cmdb{left:calc(50% - 46px)}
 .cnt-ic.cntb{left:calc(50% + 8px)}
 .cnt-chips{position:absolute;top:34px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
@@ -488,11 +490,16 @@ body.cnt-on{overflow:hidden}
 .cnt-elim b{font:800 20px var(--f-display,system-ui);text-transform:uppercase}
 .cnt-opts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .cnt-opts.col{flex-direction:column;align-items:stretch}
-.cnt-mini{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:999px;padding:8px 13px;font:700 13px system-ui;cursor:pointer}
+.cnt-mini{transition:background .2s,border-color .2s,transform .12s;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:999px;padding:8px 13px;font:700 13px system-ui;cursor:pointer}
 .cnt-mini.on{background:var(--red,#c8321a);border-color:#ff8a70}
 .cnt-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:84px;height:84px;border-radius:24px;border:2px solid rgba(233,180,76,.8);background:#0b0807;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;z-index:5;box-shadow:0 0 0 6px #000;cursor:pointer}
-.cnt-hub b{font:800 19px var(--f-num,system-ui);font-variant-numeric:tabular-nums}
+.cnt-hub b{font:800 19px var(--f-num,system-ui);font-variant-numeric:tabular-nums;transition:color .4s,opacity .4s}
+.cnt-hub{transition:border-color .4s,box-shadow .4s,transform .15s}
+.cnt-hub:active{transform:translate(-50%,-50%) scale(.94)}
+.cnt-hub.poco{animation:cntLatido 2.4s ease-in-out infinite}
+@keyframes cntLatido{50%{box-shadow:0 0 0 6px #000,0 0 22px 4px rgba(233,180,76,.45)}}
 .cnt-hub i{font-style:normal;font-size:15px;opacity:.7}
+.cnt-hub.tarde{border-color:#ff6b55}
 .cnt-hub.tarde b{color:#ff6b55}
 .cnt-hub.pausa b{opacity:.65}
 .cnt-fin,.cnt-modal{position:absolute;inset:0;z-index:10;background:rgba(5,3,2,.82);display:grid;place-items:center;padding:20px}
@@ -508,6 +515,11 @@ body.cnt-on{overflow:hidden}
 .cnt-fila button{width:40px;height:40px;border-radius:10px;border:1px solid #3a2a25;background:#211714;color:#fff;font:700 20px system-ui;cursor:pointer}
 .cnt-aviso{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(23,16,14,.95);border:1px solid var(--gold,#e9b44c);border-radius:12px;padding:8px 14px;color:#fff;font:600 13px system-ui;z-index:6;text-align:center;max-width:90%}
 .btn-contador{width:100%;margin:10px 0 4px;padding:14px 18px;font-size:16px}
+/* En la página de jugadores, el standing de la fecha lo ve solo el organizador */
+.cnt-ic:active,.cnt-mini:active,.cnt-volver:active,.cnt-fila button:active{transform:scale(.9)}
+.cnt-volver,.cnt-fila button{transition:transform .12s,background .2s}
+.cnt-fin,.cnt-modal{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+@media (prefers-reduced-motion:reduce){.cnt-hub.poco{animation:none}.cnt-delta{transition:opacity .2s}}
 /* En la página de jugadores, el standing de la fecha lo ve solo el organizador */
 body.portal #mainGrid{display:none!important}
 
@@ -4390,6 +4402,13 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
      y el reporte de la mesa se va enviando solo: kills, eliminados y, al final, el ganador. */
   const CNT_VIDA = 40, CNT_CMD = 21, CNT_VENENO = 10;
   let CNT = null, cntKey = null, cntTi = null, cntVista = null, cntTimer = 0, cntLock = null, cntModal = null;
+  // Animaciones: Web Animations API, respetando "reducir movimiento" del sistema
+  const cntQuieto = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e){ return false; } };
+  const EASE = "cubic-bezier(.22,.9,.3,1)", REBOTE = "cubic-bezier(.3,1.5,.5,1)";
+  function cntAnim(el, kf, op){ if (!el || !el.animate || cntQuieto()) return null; try { return el.animate(kf, Object.assign({easing: EASE, fill: "backwards"}, op)); } catch(e){ return null; } }
+  function cntBump(el, dir){ cntAnim(el, [{transform: `translateY(${dir > 0 ? -5 : 5}%) scale(1.07)`}, {transform: "none"}], {duration: 240, easing: REBOTE}); }
+  const cntVibrar = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} };
+  let cntPrev = {}, cntPrevModal = null, cntPrevFin = false, cntEntrando = false;
   const cntCorto = pid => { const n = pname(pid).trim().split(/\s+/); return n.length > 1 ? n[0] + " " + n[n.length - 1][0] + "." : n[0]; };
   const cntCmds = pid => { const d = deckOf(pid); const nm = d ? (d.c || (DECK[d.k] && DECK[d.k].cmd) || "") : ""; return String(nm).split(" + ").map(x => x.trim()).filter(Boolean); };
   const cntVivos = () => CNT.seats.filter(p => !CNT.out[p]);
@@ -4405,14 +4424,19 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     CNT = g; cntVista = null; cntModal = null; cntGuardar();
     let el = $("cnt");
     if (!el){ el = document.createElement("div"); el.id = "cnt"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Contador de la mesa"); document.body.appendChild(el); cntEventos(el); }
-    el.hidden = false; document.body.classList.add("cnt-on");
+    el.hidden = false; document.body.classList.add("cnt-on"); cntPrev = {}; cntPrevModal = null; cntPrevFin = false; cntEntrando = true;
     // Pantalla completa, vertical y sin que se apague (si el celular lo permite)
     try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({navigationUI: "hide"}); if (r && r.then) r.then(() => { try { screen.orientation.lock("portrait").catch(() => {}); } catch(e){} }).catch(() => {}); } catch(e){}
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(l => cntLock = l).catch(() => {}); } catch(e){}
-    cntPintar(); clearInterval(cntTimer); cntTimer = setInterval(cntReloj, 1000);
+    cntPintar(); cntEntrando = false; clearInterval(cntTimer); cntTimer = setInterval(cntReloj, 1000);
+    cntAnim(el, [{opacity: 0}, {opacity: 1}], {duration: 260});
+    el.querySelectorAll(".cnt-pnl").forEach((p, i) => cntAnim(p, [{opacity: 0, transform: "scale(.9)"}, {opacity: 1, transform: "none"}], {duration: 420, delay: 60 + i * 55}));
+    cntAnim(el.querySelector(".cnt-hub"), [{opacity: 0, transform: "translate(-50%,-50%) scale(.6) rotate(-45deg)"}, {opacity: 1, transform: "translate(-50%,-50%)"}], {duration: 520, delay: 220, easing: REBOTE});
   }
   function cntCerrar(){
-    const el = $("cnt"); if (el) el.hidden = true; document.body.classList.remove("cnt-on");
+    const el = $("cnt"), fin = () => { if (el) el.hidden = true; document.body.classList.remove("cnt-on"); };
+    const a = el && cntAnim(el, [{opacity: 1, transform: "none"}, {opacity: 0, transform: "scale(1.03)"}], {duration: 220, fill: "forwards"});
+    if (a) a.onfinish = () => { fin(); a.cancel(); }; else fin();
     clearInterval(cntTimer);
     try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch(e){}
     try { if (cntLock) cntLock.release(); } catch(e){} cntLock = null;
@@ -4420,7 +4444,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   function cntReloj(){
     const h = document.querySelector("#cnt .cnt-hub b"); if (!h || !S) return;
-    const ms = remaining(); h.textContent = fmt(ms); h.parentElement.classList.toggle("tarde", ms < 0); h.parentElement.classList.toggle("pausa", !S.timer.running);
+    const ms = remaining(); h.textContent = fmt(ms); h.parentElement.classList.toggle("tarde", ms < 0); h.parentElement.classList.toggle("poco", ms >= 0 && ms < 300000); h.parentElement.classList.toggle("pausa", !S.timer.running);
     // las ilustraciones llegan de Scryfall de a poco: se repinta cuando aparece alguna
     if (document.querySelector("#cnt [data-sinarte]") && CNT.seats.some(p => cntCmds(p).some(c => artUrl(c)))) cntPintar();
   }
@@ -4436,13 +4460,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (n === 3) return {cols: 2, rows: 2, rot: [180, 0, 0], area: [[0, 0, 2], [1, 1], [1, 0]]};
     const c = Math.ceil(n / 2); return {cols: c, rows: 2, rot: Array.from({length: n}, (_, i) => i < c ? 180 : 0), area: Array.from({length: n}, (_, i) => i < c ? [0, i] : [1, n - 1 - i])};
   }
+  function cntChips(pid){ const k = CNT.cnt[pid] || {}; return [["veneno", "☠"], ["exp", "✦"], ["energia", "⚡"], ["impuesto", "⟳"]].filter(([x]) => k[x]).map(([x, ic]) => `<span class="cnt-chip ${x}">${ic} ${k[x]}</span>`).join(""); }
+  const cntModo = pid => cntVista === pid ? "victima" : cntVista ? "atk:" + cntVista : CNT.out[pid] ? "fuera" : CNT.pend && CNT.pend.pid === pid ? "pend" : "vida";
   function cntPanel(pid, i, L){
     const [r, c, span] = L.area[i], rot = L.rot[i], vivo = !CNT.out[pid], cmds = cntCmds(pid);
     const arts = cmds.map(n => artUrl(n)).filter(Boolean);
     const fondo = arts.length > 1 ? `<span class="cnt-bg dos"><i style="background-image:url('${esc(arts[0])}')"></i><i style="background-image:url('${esc(arts[1])}')"></i></span>`
       : arts[0] ? `<span class="cnt-bg"><i style="background-image:url('${esc(arts[0])}')"></i></span>` : `<span class="cnt-bg vacio" data-sinarte="1"></span>`;
     const grid = `grid-row:${r + 1}${span ? " / span " + span : ""};grid-column:${c + 1}`;
-    const k = CNT.cnt[pid] || {}, chips = [["veneno", "☠"], ["exp", "✦"], ["energia", "⚡"], ["impuesto", "⟳"]].filter(([x]) => k[x]).map(([x, ic]) => `<span class="cnt-chip ${x}">${ic} ${k[x]}</span>`).join("");
+    const chips = cntChips(pid);
     let cuerpo;
     const enCmd = cntVista && cntVista !== pid ? cntVista : null;
     if (cntVista === pid){
@@ -4467,11 +4493,14 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         <button type="button" class="cnt-ic cmdb" data-cnt="vercmd" data-p="${pid}" aria-label="Daño de comandante recibido" title="Daño de comandante">⚔</button>
         <button type="button" class="cnt-ic cntb" data-cnt="contadores" data-p="${pid}" aria-label="Veneno, experiencia y más" title="Veneno, experiencia, energía">☠</button>`;
     }
-    return `<div class="cnt-pnl${vivo ? "" : " fuera"}${enCmd ? " atk" : ""}${cntVista === pid ? " victima" : ""}" data-pnl="${pid}" style="${grid}" data-rot="${rot}">${fondo}
+    return `<div class="cnt-pnl${vivo ? "" : " fuera"}${enCmd ? " atk" : ""}${cntVista === pid ? " victima" : ""}" data-pnl="${pid}" data-modo="${cntModo(pid)}" style="${grid}" data-rot="${rot}">${fondo}
       <div class="cnt-in" style="--rot:${rot}deg"><span class="cnt-nm">${esc(cntCorto(pid))}</span>${cuerpo}<span class="cnt-chips">${chips}</span></div></div>`;
   }
   function cntPintar(){
     const el = $("cnt"); if (!el || !CNT) return;
+    // cómo se veía cada fondo antes de repintar, para pasar suave al estado nuevo
+    const antes = {};
+    el.querySelectorAll(".cnt-pnl").forEach(p => { const bg = p.querySelector(".cnt-bg"); if (bg) antes[p.dataset.pnl] = {f: getComputedStyle(bg).filter, o: getComputedStyle(bg, "::after").opacity}; });
     const W = window.innerWidth, H = window.innerHeight, L = cntLayout(CNT.seats.length, W, H);
     const t = S && S.rounds[S.cur] && S.rounds[S.cur].tables[cntTi];
     const vivos = cntVivos(), gano = vivos.length === 1 && CNT.seats.length > 1 ? vivos[0] : null;
@@ -4484,7 +4513,44 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     el.querySelectorAll(".cnt-pnl").forEach(p => {
       const r = Math.abs(+p.dataset.rot) === 90, inn = p.querySelector(".cnt-in"), w = p.clientWidth, h = p.clientHeight;
       inn.style.width = (r ? h : w) + "px"; inn.style.height = (r ? w : h) + "px";
+      const pid = p.dataset.pnl, modo = p.dataset.modo, prev = cntPrev[pid];
+      if (!cntEntrando && prev !== undefined && prev !== modo){
+        const bg = p.querySelector(".cnt-bg"), a = antes[pid];
+        if (bg && a){
+          const f = getComputedStyle(bg).filter, o = getComputedStyle(bg, "::after").opacity;
+          cntAnim(bg, [{filter: a.f === "none" ? "brightness(1)" : a.f}, {filter: f === "none" ? "brightness(1)" : f}], {duration: modo === "fuera" ? 700 : 320});
+          cntAnim(bg, [{opacity: a.o}, {opacity: o}], {duration: 320, pseudoElement: "::after"});
+        }
+        [...inn.children].filter(c => !c.classList.contains("cnt-nm") && !c.classList.contains("cnt-chips")).forEach((c, k) =>
+          cntAnim(c, [{opacity: 0, transform: modo === "fuera" ? "scale(1.25)" : "scale(.92)"}, {opacity: 1, transform: "none"}], {duration: modo === "fuera" ? 460 : 300, delay: k * 18, easing: modo === "fuera" ? REBOTE : EASE}));
+        if (modo === "fuera") cntAnim(p, [{transform: "translateX(0)"}, {transform: "translateX(-1.5%)"}, {transform: "translateX(1.5%)"}, {transform: "translateX(0)"}], {duration: 260, delay: 40});
+      }
+      cntPrev[pid] = modo;
     });
+    // modal y pantalla de ganador: entran solo cuando aparecen
+    const md = el.querySelector(".cnt-modal");
+    if (md && !cntEntrando){
+      const tipo = cntModal.tipo + (cntModal.p || "");
+      if (cntPrevModal === null){ cntAnim(md, [{opacity: 0}, {opacity: 1}], {duration: 220}); cntAnim(md.firstElementChild, [{opacity: 0, transform: "translateY(18px) scale(.97)"}, {opacity: 1, transform: "none"}], {duration: 320}); }
+      else if (cntPrevModal !== tipo) cntAnim(md.firstElementChild, [{opacity: 0, transform: "scale(.97)"}, {opacity: 1, transform: "none"}], {duration: 240});
+    }
+    cntPrevModal = md ? cntModal.tipo + (cntModal.p || "") : null;
+    const fn = el.querySelector(".cnt-fin");
+    if (fn && !cntPrevFin){
+      cntAnim(fn, [{opacity: 0}, {opacity: 1}], {duration: 450});
+      const d = fn.firstElementChild.children;
+      [...d].forEach((c, k) => cntAnim(c, [{opacity: 0, transform: k === 1 ? "scale(.7)" : "translateY(10px)"}, {opacity: 1, transform: "none"}], {duration: k === 1 ? 600 : 380, delay: 150 + k * 90, easing: k === 1 ? REBOTE : EASE}));
+      cntVibrar([30, 60, 30]);
+    }
+    cntPrevFin = !!fn;
+  }
+  // cerrar un modal con salida suave
+  function cntSinModal(){
+    const md = document.querySelector("#cnt .cnt-modal");
+    const a = md && cntAnim(md, [{opacity: 1}, {opacity: 0}], {duration: 160, fill: "forwards"});
+    if (md) cntAnim(md.firstElementChild, [{transform: "none"}, {transform: "translateY(10px) scale(.98)"}], {duration: 160, fill: "forwards"});
+    const fin = () => { cntModal = null; cntPintar(); };
+    if (a) a.onfinish = fin; else fin();
   }
   function cntModalHTML(){
     if (cntModal.tipo === "menu"){
@@ -4534,7 +4600,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   function cntDelta(pid, n){
     const s = document.querySelector(`#cnt [data-delta="${pid}"]`); if (!s) return;
-    s._v = (s._v || 0) + n; s.textContent = (s._v > 0 ? "+" : "") + s._v; s.classList.add("on");
+    s._v = (s._v || 0) + n; s.textContent = (s._v > 0 ? "+" : "") + s._v; s.classList.toggle("neg", s._v < 0); s.classList.add("on");
     clearTimeout(s._t); s._t = setTimeout(() => { s._v = 0; s.classList.remove("on"); }, 1400);
   }
   function cntAccion(b){
@@ -4542,20 +4608,28 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (a === "v+" || a === "v-"){
       CNT.life[p] += a === "v+" ? 1 : -1; cntRevisar(p); cntGuardar();
       const n = document.querySelector(`#cnt [data-pnl="${p}"] .cnt-num`);
-      if (n && !(CNT.pend && CNT.pend.pid === p)){ n.textContent = CNT.life[p]; cntDelta(p, a === "v+" ? 1 : -1); } else cntPintar();
+      if (n && !(CNT.pend && CNT.pend.pid === p)){ n.textContent = CNT.life[p]; cntDelta(p, a === "v+" ? 1 : -1); cntBump(n, a === "v+" ? 1 : -1); } else { cntVibrar(40); cntPintar(); }
       return;
     }
     if (a === "cmd+" || a === "cmd-"){
       const v = cntVista, ci = +b.dataset.ci; if (!v) return;
       const m = CNT.cmd[v][p] = CNT.cmd[v][p] || {}; const antes = m[ci] || 0, ahora = Math.max(0, antes + (a === "cmd+" ? 1 : -1));
       m[ci] = ahora; CNT.life[v] -= ahora - antes; cntRevisar(v); cntGuardar();
-      if (CNT.pend && CNT.pend.pid === v) cntVista = null;
-      return cntPintar();
+      if (CNT.pend && CNT.pend.pid === v){ cntVista = null; cntVibrar(40); return cntPintar(); }
+      const n = b.parentElement.querySelector(".cnt-num");
+      if (n){ n.textContent = ahora; n.classList.toggle("letal", ahora >= CNT_CMD); if (ahora !== antes) cntBump(n, ahora - antes); }
+      return;
     }
     if (a === "vercmd"){ cntVista = p; return cntPintar(); }
     if (a === "volver"){ cntVista = null; return cntPintar(); }
     if (a === "contadores"){ cntModal = {tipo: "contadores", p}; return cntPintar(); }
-    if (a === "c+" || a === "c-"){ const c = b.dataset.c; CNT.cnt[p][c] = Math.max(0, (CNT.cnt[p][c] || 0) + (a === "c+" ? 1 : -1)); cntRevisar(p); cntGuardar(); if (CNT.pend && CNT.pend.pid === p) cntModal = null; return cntPintar(); }
+    if (a === "c+" || a === "c-"){
+      const c = b.dataset.c; CNT.cnt[p][c] = Math.max(0, (CNT.cnt[p][c] || 0) + (a === "c+" ? 1 : -1)); cntRevisar(p); cntGuardar();
+      if (CNT.pend && CNT.pend.pid === p){ cntVibrar(40); return cntSinModal(); }
+      const v = b.parentElement.querySelector("b"); if (v){ v.textContent = CNT.cnt[p][c]; cntBump(v, a === "c+" ? 1 : -1); }
+      const ch = document.querySelector(`#cnt [data-pnl="${p}"] .cnt-chips`); if (ch) ch.innerHTML = cntChips(p);
+      return;
+    }
     if (a === "elim"){
       CNT.orden = (CNT.orden || 0) + 1;
       CNT.out[p] = {by: b.dataset.by || null, como: (CNT.pend && CNT.pend.como) || "vida", orden: CNT.orden}; CNT.ultimo = p; CNT.pend = null;
@@ -4575,21 +4649,27 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       cntGuardar(); cntPintar(); cntReportar(); return;
     }
     if (a === "menu"){ cntModal = {tipo: "menu"}; return cntPintar(); }
-    if (a === "cerrarmodal"){ cntModal = null; return cntPintar(); }
+    if (a === "cerrarmodal") return cntSinModal();
     if (a === "tiempo"){ cntModal = {tipo: "confirmar", titulo: "¿Terminar la partida?", texto: `Se reporta la mesa con ${cntVivos().length} ${cntVivos().length === 1 ? "jugador vivo" : "jugadores vivos"} y las kills anotadas. Si alguien tiene que sumar o quitar algo, se corrige después en “Reportar resultado de la mesa”.`, ok: "Terminar y reportar", si: "tiempo-si"}; return cntPintar(); }
-    if (a === "tiempo-si"){ cntModal = null; cntReportar(); cntCerrar(); return; }
+    if (a === "tiempo-si"){ cntReportar(); cntCerrar(); setTimeout(() => cntModal = null, 250); return; }
     if (a === "reiniciar"){ cntModal = {tipo: "confirmar", titulo: "¿Reiniciar las vidas?", texto: "Todos vuelven a 40 y se borran contadores y eliminaciones del contador. Lo que ya se reportó no cambia hasta la próxima eliminación.", ok: "Reiniciar", si: "reiniciar-si"}; return cntPintar(); }
-    if (a === "reiniciar-si"){ localStorage.removeItem(cntKey); cntModal = null; const ti = cntTi; cntAbrir(ti); return; }
-    if (a === "salir"){ cntModal = null; cntCerrar(); return; }
+    if (a === "reiniciar-si"){ try { localStorage.removeItem(cntKey); } catch(e){} cntModal = null; const ti = cntTi; cntAbrir(ti); return; }
+    if (a === "salir"){ cntCerrar(); setTimeout(() => cntModal = null, 250); return; }
   }
   function cntEventos(el){
     // tocar + / −: mantener presionado suma o resta seguido
-    let rep = 0, repT = 0, ini = null, swipe = false;
-    const parar = () => { clearTimeout(repT); clearInterval(rep); rep = 0; };
+    let repT = 0, ini = null, swipe = false;
+    const parar = () => { clearTimeout(repT); repT = 0; };
     el.addEventListener("pointerdown", e => {
       ini = {x: e.clientX, y: e.clientY, pnl: e.target.closest(".cnt-pnl")}; swipe = false;
       const z = e.target.closest('[data-cnt="v+"], [data-cnt="v-"]');
-      if (z){ repT = setTimeout(() => { rep = setInterval(() => { if (swipe) return parar(); cntAccion(z); z._hecho = true; }, 110); }, 450); }
+      const zz = e.target.closest(".z");
+      if (zz){
+        cntAnim(zz, [{backgroundColor: "rgba(255,255,255,.16)"}, {backgroundColor: "rgba(255,255,255,0)"}], {duration: 450, easing: "ease-out"});
+        if (zz.firstElementChild) cntAnim(zz.firstElementChild, [{transform: "scale(1.35)"}, {transform: "none"}], {duration: 260, easing: REBOTE});
+        cntVibrar(6);
+      }
+      if (z){ let paso = 170; const tick = () => { if (swipe) return parar(); cntAccion(z); z._hecho = true; paso = Math.max(55, paso * .86); repT = setTimeout(tick, paso); }; repT = setTimeout(tick, 420); }
     });
     el.addEventListener("pointermove", e => {
       if (!ini || swipe) return;
