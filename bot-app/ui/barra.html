@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>Barra</title>
+<style>
+:root{--bg:#0e0908;--s2:#211714;--line:#3a2a25;--fg:#f4ece6;--mut:#a8968e;--red:#c8321a;--red2:#e0472b;--gold:#e9b44c;--ok:#4fbf7a;--warn:#f0a63a;--err:#ff6b55}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:linear-gradient(180deg,#1a100d,#120b09);border-bottom:1px solid var(--line);color:var(--fg);font:14px/1 "Segoe UI",system-ui,sans-serif;display:flex;align-items:center;gap:10px;padding:0 12px;-webkit-user-select:none;user-select:none}
+img{width:32px;height:32px}
+.marca{display:flex;flex-direction:column;gap:3px;margin-right:10px}
+.marca b{font-size:14px;letter-spacing:.02em}
+.marca small{font-size:10px;color:var(--mut);letter-spacing:.12em;text-transform:uppercase}
+.tab{display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:10px;background:transparent;border:1px solid transparent;color:var(--mut);font:600 14px "Segoe UI",system-ui,sans-serif;cursor:pointer}
+.tab:hover{color:var(--fg);background:var(--s2)}
+.tab.on{color:#fff;background:#2e1712;border-color:var(--red2)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mut)}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.warn{background:var(--warn)}
+.dot.err{background:var(--err)}
+.sp{flex:1}
+.btn{height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line);background:var(--s2);color:var(--fg);font:600 13px "Segoe UI",system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn:hover{border-color:#5a443d}
+.btn.tv.on{background:linear-gradient(180deg,var(--red2),var(--red));border-color:#e65a3e}
+.btn.ic{width:34px;padding:0;justify-content:center}
+</style>
+</head>
+<body>
+  <img src="logo.png" alt="">
+  <div class="marca"><small>Liga El Desafío</small><b>Organizador</b></div>
+  <button class="tab on" type="button" data-v="liga">🏆 Liga</button>
+  <button class="tab" type="button" data-v="bot"><span class="dot" id="dot"></span>Bot de WhatsApp</button>
+  <span class="sp"></span>
+  <button class="btn tv" type="button" id="tv" title="Abre la pantalla para la TV (en el segundo monitor, si está conectado). F11 = pantalla completa">📺 Pantalla TV</button>
+  <button class="btn" type="button" id="pub" title="Abre en el navegador la página que ven los jugadores">🌐 Página de jugadores</button>
+  <button class="btn ic" type="button" id="rec" title="Recargar">↻</button>
+<script>
+const $ = id => document.getElementById(id);
+document.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", async () => {
+  await bot.vista(b.dataset.v);
+  document.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
+}));
+$("tv").addEventListener("click", async () => { const on = await bot.pantalla(); $("tv").classList.toggle("on", !!on); $("tv").textContent = on ? "📺 Cerrar pantalla TV" : "📺 Pantalla TV"; });
+$("pub").addEventListener("click", () => bot.publica());
+$("rec").addEventListener("click", () => bot.recargar());
+bot.on("vista", v => document.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x.dataset.v === v)));
+bot.on("pantalla", on => { $("tv").classList.toggle("on", !!on); $("tv").textContent = on ? "📺 Cerrar pantalla TV" : "📺 Pantalla TV"; });
+const color = s => s === "listo" ? "ok" : ["desconectado", "fallo", "error"].includes(s) ? "err" : "warn";
+const titulo = s => ({listo: "Bot conectado", vincular: "Falta vincular WhatsApp", desconectado: "Bot desconectado", fallo: "No se pudo iniciar sesión", error: "Error en el bot", reiniciando: "Bot reiniciándose"}[s] || "Conectando el bot…");
+bot.on("estado", d => { $("dot").className = "dot " + color(d.s); $("dot").title = titulo(d.s); });
+bot.inicio().then(i => { if (i && i.estado){ $("dot").className = "dot " + color(i.estado); $("dot").title = titulo(i.estado); } });
+</script>
+</body>
+</html>

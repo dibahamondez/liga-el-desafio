@@ -111,12 +111,12 @@ ol.pasos li{margin:4px 0}
 <body>
 <header>
   <img src="logo.png" alt="">
-  <h1><small>Cafetería El Desafío</small>Bot de la Liga</h1>
+  <h1><small>Solo manda lo que tú envíes</small>Bot de WhatsApp</h1>
   <span class="pill" id="pill"><i></i><span id="pillTxt">Iniciando…</span></span>
   <span class="sp"></span>
   <span class="cola" id="cola"></span>
   <div class="hdr-btns">
-    <button class="btn pausa" id="btnPausa" type="button" title="Las mesas, resultados y standing se publican solos en los grupos de la liga. Aquí los pausas.">⏸ Pausar automáticos</button>
+    <button class="btn pausa" id="btnPausa" type="button" hidden>⏸</button>
     <button class="btn" id="btnAjustes" type="button">⚙ Ajustes</button>
   </div>
 </header>
@@ -268,7 +268,7 @@ async function cargarEstado(){
   const r = await bot.pedir("estado");
   if (!Array.isArray(r)) return;
   $("estado").innerHTML = r.map(l => l.sinDatos ? `<div class="liga"><b>${esc(l.nombre)}</b><span class="m">Sin datos todavía</span></div>` :
-    `<div class="liga"><b>${esc(l.nombre)} · ${esc(l.fecha)}</b><span class="m">${esc(l.fase)} · ${l.jugadores} jugadores${l.ronda ? ` · Ronda ${l.ronda.n} de ${l.ronda.de}: ${l.ronda.reportadas}/${l.ronda.mesas} mesas` : ""}</span>${l.ronda ? `<div class="barra"><i style="width:${l.ronda.mesas ? Math.round(l.ronda.reportadas / l.ronda.mesas * 100) : 0}%"></i></div>` : ""}<span class="m" style="display:block;margin-top:4px">${l.grupo ? "Publica solo en: " + esc(l.grupo) : "Sin grupo configurado (solo envíos a mano)"}</span></div>`).join("") || '<div class="vacio">Sin ligas</div>';
+    `<div class="liga"><b>${esc(l.nombre)} · ${esc(l.fecha)}</b><span class="m">${esc(l.fase)} · ${l.jugadores} jugadores${l.ronda ? ` · Ronda ${l.ronda.n} de ${l.ronda.de}: ${l.ronda.reportadas}/${l.ronda.mesas} mesas` : ""}</span>${l.ronda ? `<div class="barra"><i style="width:${l.ronda.mesas ? Math.round(l.ronda.reportadas / l.ronda.mesas * 100) : 0}%"></i></div>` : ""}<span class="m" style="display:block;margin-top:4px">${l.grupo ? "Grupo de la liga: " + esc(l.grupo) : "Sin grupo de la liga configurado"}</span></div>`).join("") || '<div class="vacio">Sin ligas</div>';
 }
 async function cargarImagenes(){
   const r = await bot.pedir("imagenes", {liga: sel.liga});

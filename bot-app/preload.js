@@ -8,5 +8,9 @@ contextBridge.exposeInMainWorld("bot", {
   abrirCarpeta: sub => ipcRenderer.invoke("carpeta:abrir", sub),
   cambiarCarpeta: () => ipcRenderer.invoke("carpeta:cambiar"),
   desvincular: () => ipcRenderer.invoke("desvincular"),
+  vista: v => ipcRenderer.invoke("vista", v),
+  pantalla: () => ipcRenderer.invoke("pantalla"),
+  recargar: () => ipcRenderer.invoke("recargar"),
+  publica: () => ipcRenderer.invoke("publica"),
   on: (canal, fn) => ipcRenderer.on(canal, (e, d) => fn(d))
 });

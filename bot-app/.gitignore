@@ -1,4 +1,5 @@
 node_modules/
 dist/
 bot/
+web/
 ui/logo.png

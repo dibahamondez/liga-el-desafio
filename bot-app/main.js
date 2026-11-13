@@ -1,8 +1,9 @@
-// App de escritorio del bot de WhatsApp de la Liga El Desafío.
-// La ventana es la interfaz; el bot (el mismo bot.js de la consola) corre aparte, dentro de la app,
-// y se comunican por un canal interno. Si el bot se cae, la app lo vuelve a abrir sola.
-const { app, BrowserWindow, ipcMain, dialog, shell, powerSaveBlocker } = require("electron");
-const path = require("path"), fs = require("fs"), os = require("os"), { fork } = require("child_process");
+// App de escritorio de los organizadores de la Liga El Desafío.
+// Junta en una sola ventana: el panel del organizador (la misma página de la liga, servida desde el PC),
+// el bot de WhatsApp (solo manda lo que el organizador envía) y la pantalla para la TV del evento.
+// El bot (el mismo bot.js de la consola) corre aparte, dentro de la app; si se cae, la app lo vuelve a abrir sola.
+const { app, BrowserWindow, BaseWindow, WebContentsView, ipcMain, dialog, shell, powerSaveBlocker, screen } = require("electron");
+const path = require("path"), fs = require("fs"), os = require("os"), http = require("http"), { fork } = require("child_process");
 const QR = require("qrcode");
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
@@ -13,8 +14,27 @@ const leerAjustes = () => { try { return JSON.parse(fs.readFileSync(AJUSTES(), "
 const guardarAjustes = a => { fs.mkdirSync(path.dirname(AJUSTES()), { recursive: true }); fs.writeFileSync(AJUSTES(), JSON.stringify(a, null, 2)); };
 
 let win = null, bot = null, saliendo = false, reinicio = null, carpeta = null, pend = new Map(), nPet = 0;
+let vBarra = null, vLiga = null, vBot = null, vistaAct = "liga", tv = null, URL_LIGA = null;
 const ultimo = { estado: "apagado", code: null, qr: null, logs: [] };
-const aVentana = (canal, dato) => { if (win && !win.isDestroyed()) win.webContents.send(canal, dato); };
+const vivo = v => v && !v.webContents.isDestroyed();
+const aVentana = (canal, dato) => { if (vivo(vBot)) vBot.webContents.send(canal, dato); if (canal === "estado" && vivo(vBarra)) vBarra.webContents.send("estado", dato); };
+const WEB_DIR = path.join(__dirname, "web");
+const PUBLICA = "https://liga-eldesafio.netlify.app/";
+
+// ---------- Servidor local de la página de la liga (solo en este PC) ----------
+const TIPOS = { ".html": "text/html; charset=utf-8", ".js": "application/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".json": "application/json" };
+function servidorLiga() {
+  return new Promise(ok => {
+    const srv = http.createServer((q, r) => {
+      let rel = decodeURIComponent(q.url.split("?")[0].split("#")[0]); if (rel.endsWith("/")) rel += "index.html";
+      const f = path.normalize(path.join(WEB_DIR, rel));
+      if (!f.startsWith(WEB_DIR)) { r.writeHead(403); return r.end(); }
+      fs.readFile(f, (e, d) => { if (e) { r.writeHead(404); return r.end("No encontrado"); } r.writeHead(200, { "content-type": TIPOS[path.extname(f).toLowerCase()] || "application/octet-stream", "cache-control": "no-store" }); r.end(d); });
+    });
+    const probar = puerto => { srv.once("error", () => probar(puerto + 1)); srv.listen(puerto, "127.0.0.1", () => ok(`http://localhost:${puerto}/`)); };
+    probar(47830);   // puerto fijo (si está ocupado, el siguiente): así la sesión del organizador se mantiene entre aperturas
+  });
+}
 
 // ---------- Carpeta del bot (config.json, sesión de WhatsApp, memoria, imágenes) ----------
 // Busca la carpeta del bot de consola que ya se usaba (así no hay que volver a vincular WhatsApp)
@@ -73,6 +93,7 @@ function iniciarBot() {
     if (!m) return;
     if (m.ev === "resp") { const p = pend.get(m.id); if (p) { pend.delete(m.id); clearTimeout(p.t); p.ok(m.data); } return; }
     if (m.ev === "log") return registro(m.t, m.err);
+    if (m.ev === "code" || m.ev === "qr") verBot();
     if (m.ev === "code") { ultimo.estado = "vincular"; ultimo.code = m.code; return aVentana("estado", { s: "vincular", code: m.code }); }
     if (m.ev === "qr") { ultimo.estado = "vincular"; try { ultimo.qr = await QR.toDataURL(m.qr, { margin: 1, width: 300 }); } catch (e) {} return aVentana("estado", { s: "vincular", qr: ultimo.qr, code: ultimo.code }); }
     if (m.ev === "estado") { ultimo.estado = m.s; return aVentana("estado", { s: m.s, t: m.t }); }
@@ -115,22 +136,62 @@ function pedir(cmd, a, ms = 120000) {
 }
 
 // ---------- Ventana ----------
+const ALTO_BARRA = 52;
+function acomodar() {
+  if (!win) return;
+  const [w, h] = win.getContentSize();
+  vBarra.setBounds({ x: 0, y: 0, width: w, height: ALTO_BARRA });
+  const zona = { x: 0, y: ALTO_BARRA, width: w, height: Math.max(0, h - ALTO_BARRA) };
+  vLiga.setBounds(zona); vBot.setBounds(zona);
+  vLiga.setVisible(vistaAct === "liga"); vBot.setVisible(vistaAct === "bot");
+}
+// Los links a otros sitios (la página pública, Scryfall, WhatsApp…) se abren en el navegador normal
+function linksAfuera(wc) {
+  const local = u => u.startsWith(URL_LIGA) || u.startsWith("file:") || u.startsWith("about:");
+  wc.setWindowOpenHandler(({ url }) => { if (!local(url)) shell.openExternal(url); return { action: "deny" }; });
+  wc.on("will-navigate", (e, url) => { if (!local(url) && !/supabase\.co|accounts\.google\.com/.test(url)) { e.preventDefault(); shell.openExternal(url); } });
+}
 function crearVentana() {
-  win = new BrowserWindow({
-    width: 1320, height: 860, minWidth: 980, minHeight: 640, backgroundColor: "#0e0908", title: "Bot Liga El Desafío",
-    icon: path.join(__dirname, "ui", "logo.png"), autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false }
-  });
-  win.loadFile(path.join(__dirname, "ui", "index.html"));
+  win = new BaseWindow({ width: 1360, height: 880, minWidth: 1000, minHeight: 640, backgroundColor: "#0e0908", title: "El Desafío · Organizador", icon: path.join(__dirname, "ui", "logo.png"), autoHideMenuBar: true });
+  vBarra = new WebContentsView({ webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true } });
+  vLiga = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false } });
+  vBot = new WebContentsView({ webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false } });
+  [vBarra, vLiga, vBot].forEach(v => { v.setBackgroundColor("#0e0908"); win.contentView.addChildView(v); });
+  vBarra.webContents.loadFile(path.join(__dirname, "ui", "barra.html"));
+  vBot.webContents.loadFile(path.join(__dirname, "ui", "index.html"));
+  vLiga.webContents.loadURL(URL_LIGA + "index.html");
+  linksAfuera(vLiga.webContents);
+  win.on("resize", acomodar); acomodar();
+  global.__vistas = () => ({ win, vBarra, vLiga, vBot });   // para pruebas automáticas
   win.on("close", async e => {
     if (saliendo) return;
     e.preventDefault();
-    const r = await dialog.showMessageBox(win, { type: "warning", buttons: ["Cerrar el bot", "Cancelar"], defaultId: 1, cancelId: 1, noLink: true,
-      title: "Cerrar el bot", message: "¿Cerrar el bot?", detail: "Mientras esté cerrado no se publican las mesas ni los resultados en los grupos." });
+    const r = await dialog.showMessageBox(win, { type: "warning", buttons: ["Cerrar", "Cancelar"], defaultId: 1, cancelId: 1, noLink: true,
+      title: "Cerrar", message: "¿Cerrar la app del organizador?", detail: "Se cierran también el bot de WhatsApp y la pantalla de la TV. La liga sigue guardada." });
     if (r.response !== 0) return;
-    saliendo = true; await detenerBot(); app.quit();
+    saliendo = true; if (tv && !tv.isDestroyed()) tv.destroy(); await detenerBot(); app.quit();
   });
 }
+// Pantalla para la TV: ventana aparte, a pantalla completa en el segundo monitor si hay uno
+async function abrirPantalla() {
+  if (tv && !tv.isDestroyed()) { tv.close(); return false; }
+  // la TV muestra la misma liga que está abierta en el panel (Precon o Bracket 3)
+  let liga = ""; try { liga = await vLiga.webContents.executeJavaScript('(document.getElementById("lnkOther") && new URL(document.getElementById("lnkOther").href).searchParams.get("liga")) || ""'); } catch (e) {}
+  const ds = screen.getAllDisplays(), prin = screen.getPrimaryDisplay(), otra = ds.find(d => d.id !== prin.id) || prin;
+  tv = new BrowserWindow({ x: otra.bounds.x + 40, y: otra.bounds.y + 40, width: 1280, height: 760, backgroundColor: "#000", title: "Pantalla · Liga El Desafío", icon: path.join(__dirname, "ui", "logo.png"), autoHideMenuBar: true,
+    fullscreen: otra.id !== prin.id, webPreferences: { contextIsolation: true } });
+  tv.loadURL(URL_LIGA + "index.html?pantalla=1" + (liga ? "&liga=" + encodeURIComponent(liga) : ""));
+  linksAfuera(tv.webContents);
+  tv.webContents.on("before-input-event", (e, i) => { if (i.type === "keyDown" && (i.key === "F11" || (i.key === "Escape" && tv.isFullScreen()))) { e.preventDefault(); tv.setFullScreen(i.key === "F11" ? !tv.isFullScreen() : false); } });
+  tv.on("closed", () => { tv = null; if (vivo(vBarra)) vBarra.webContents.send("pantalla", false); });
+  return true;
+}
+// Si hay que vincular WhatsApp, se muestra la pestaña del bot para que se vea el código
+function verBot() { if (vistaAct !== "bot" && win) { vistaAct = "bot"; acomodar(); if (vivo(vBarra)) vBarra.webContents.send("vista", "bot"); } }
+ipcMain.handle("vista", (e, v) => { vistaAct = v === "bot" ? "bot" : "liga"; acomodar(); return vistaAct; });
+ipcMain.handle("pantalla", () => abrirPantalla());
+ipcMain.handle("recargar", () => { if (vistaAct === "liga") vLiga.webContents.reload(); else vBot.webContents.reload(); if (tv && !tv.isDestroyed()) tv.webContents.reload(); });
+ipcMain.handle("publica", () => shell.openExternal(PUBLICA));
 
 ipcMain.handle("bot", (e, cmd, a) => pedir(cmd, a));
 ipcMain.handle("inicio", () => ({ estado: ultimo.estado, code: ultimo.code, qr: ultimo.qr, logs: ultimo.logs, carpeta, liga: leerAjustes().liga || "ambas", version: app.getVersion() }));
@@ -157,11 +218,13 @@ ipcMain.handle("desvincular", async () => {
 });
 
 app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+// La ventana principal es una BaseWindow: los diálogos se anclan a ella
 app.whenReady().then(async () => {
-  powerSaveBlocker.start("prevent-app-suspension");   // que el PC no se duerma mientras el bot está abierto
+  powerSaveBlocker.start("prevent-display-sleep");   // que el PC y la pantalla no se duerman durante el evento
+  URL_LIGA = await servidorLiga();
   crearVentana();
   carpeta = await elegirCarpeta(false);
   aVentana("carpeta", carpeta);
   iniciarBot();
 });
-app.on("window-all-closed", () => { saliendo = true; detenerBot().then(() => app.quit()); });
+app.on("window-all-closed", () => { if (!saliendo && win && !win.isDestroyed()) return; saliendo = true; detenerBot().then(() => app.quit()); });

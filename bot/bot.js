@@ -216,10 +216,12 @@ async function revisar() {
 }
 
 async function iniciar() {
+  // En la app del organizador el bot NO publica nada solo: manda únicamente lo que el organizador envía desde la app
+  if (APP) { console.log(`${hora()} Bot listo. Solo manda lo que envíes desde la app (sin mensajes automáticos).`); return iniciarApp(); }
   console.log(`${hora()} Bot listo. Revisando la liga cada ${CFG.cadaSegundos || 15} s.`);
   await revisar();
   setInterval(revisar, (CFG.cadaSegundos || 15) * 1000);
-  if (APP) iniciarApp(); else iniciarMenu();
+  iniciarMenu();
 }
 
 // ---------- Menú de comandos (se escribe el número en la ventana del bot) ----------
@@ -331,7 +333,8 @@ async function verFecha() {
 }
 // Arma el mensaje de la opción elegida. Devuelve {msgs, que, liga, mesas} o null si no se puede.
 let notaApp = "";
-const nota = t => { console.log(t); notaApp = String(t).trim(); };
+let callado = false;
+const nota = t => { if (!callado) console.log(t); notaApp = String(t).trim(); };
 async function armarMensaje(op, grupo, ligaSel, opc) {
   if (op === "7" && opc) {
     const t = String(opc.texto || "").trim();
@@ -472,7 +475,7 @@ async function comando(op) {
 async function estadoLigas() {
   const out = [];
   for (const l of ligasConDatos()) {
-    const d = await leerDatos(l);
+    callado = true; let d; try { d = await leerDatos(l); } finally { callado = false; }
     if (!d) { out.push({ liga: l, nombre: (NOMBRE_LIGA[l] || l).replace("🧪 ", ""), sinDatos: true }); continue; }
     const { S, ri, ronda, hayMesas, fecha } = d;
     out.push({ liga: l, nombre: (NOMBRE_LIGA[l] || l).replace("🧪 ", ""), fecha, jugadores: S.players.length,

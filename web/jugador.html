@@ -5214,17 +5214,19 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     tvStep($("tables"), $("tables").children, $("tvMesas"));
     tvStep(document.querySelector("#mainGrid .stand-scroll"), document.querySelectorAll("#standBody tr"), $("tvStand"), (document.querySelector("#mainGrid .stand thead") || {offsetHeight:0}).offsetHeight);
   }, TV_MS);
+  const PANTALLA_APP = !PORTAL && !!new URLSearchParams(location.search).get("pantalla");
   $("btnDisplay").addEventListener("click", () => {
     const on = document.body.classList.toggle("display");
     if (on){ setView(view === "warn" ? "live" : view); tvLabel(); focus = null; ["tables"].forEach(id => $(id).scrollTop = 0); const ss = document.querySelector("#mainGrid .stand-scroll"); if (ss) ss.scrollTop = 0; $("tvMesas").textContent = ""; $("tvStand").textContent = ""; render(); }
     if (!on) setView(view);
     $("btnDisplay").textContent = on ? "Salir de modo pantalla" : "Modo pantalla";
     try { renderCompanion(); } catch(e){}
-    if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    // En la ventana de TV de la app de escritorio, la pantalla completa la maneja la ventana (F11), no la página
+    if (on && !PANTALLA_APP && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
     if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   });
   document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement && document.body.classList.contains("display")){ document.body.classList.remove("display"); setView(view); $("btnDisplay").textContent = "Modo pantalla"; }
+    if (!PANTALLA_APP && !document.fullscreenElement && document.body.classList.contains("display")){ document.body.classList.remove("display"); setView(view); $("btnDisplay").textContent = "Modo pantalla"; }
   });
 
   /* ---------- Inicio ---------- */
@@ -5251,6 +5253,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const {db, user} = c;
     M.db = db; M.user = user; M.perfil = c.perfil;
     M.admin = c.admin; M.dev = !!(c.admin && c.dev); M.juez = !!c.juez;
+    // En la página pública (portal) nadie gestiona: organizadores y jueces trabajan desde la app de escritorio
+    if (PORTAL){ M.admin = false; M.dev = false; M.juez = false; }
     // Liga de testeo: cualquiera con el link la puede ver (p. ej. desde el celular), pero solo el desarrollador la maneja
     if (TEST && !M.dev) M.admin = false;
     M.uid = c.session ? c.session.user.id : null;
@@ -5370,6 +5374,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     $("btnDisplay").hidden = true;
   }
   { const v0 = Object.keys(VISTA_HASH).find(k => VISTA_HASH[k] && VISTA_HASH[k] === location.hash); if (v0) setView(v0); }
+  // App de escritorio: ?pantalla=1 abre directo el modo pantalla (para la TV del evento)
+  if (PANTALLA_APP) setTimeout(() => { if (!document.body.classList.contains("display")) $("btnDisplay").click(); }, 800);
   init();
 })();
 </script>

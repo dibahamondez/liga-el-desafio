@@ -1,9 +1,9 @@
 {
   "name": "bot-liga-el-desafio",
-  "productName": "Bot Liga El Desafío",
-  "version": "2.0.0",
+  "productName": "El Desafío Organizador",
+  "version": "3.0.0",
   "private": true,
-  "description": "Bot de WhatsApp de la Liga Commander El Desafío, con ventana propia",
+  "description": "App de los organizadores de la Liga El Desafío: panel de la liga, sorteos, pantalla de la TV y bot de WhatsApp",
   "author": "Diego Bahamondez",
   "main": "main.js",
   "scripts": {
@@ -22,7 +22,7 @@
   },
   "build": {
     "appId": "cl.eldesafio.bot",
-    "productName": "Bot Liga El Desafío",
+    "productName": "El Desafío Organizador",
     "asar": false,
     "directories": {
       "output": "dist",
@@ -33,6 +33,7 @@
       "preload.js",
       "ui/**",
       "bot/**",
+      "web/**",
       "package.json",
       "node_modules/**"
     ],
@@ -47,8 +48,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Bot Liga El Desafío",
-      "artifactName": "Instalar-Bot-Liga-El-Desafio.exe",
+      "shortcutName": "El Desafío Organizador",
+      "artifactName": "Instalar-El-Desafio-Organizador.exe",
       "installerLanguages": [
         "es_ES"
       ],
