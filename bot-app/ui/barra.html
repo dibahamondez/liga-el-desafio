@@ -25,6 +25,24 @@ img{width:32px;height:32px}
 .btn:hover{border-color:#5a443d}
 .btn.tv.on{background:linear-gradient(180deg,var(--red2),var(--red));border-color:#e65a3e}
 .btn.ic{width:34px;padding:0;justify-content:center}
+.btn,.tab,.seg button{transition:background-color .18s,border-color .18s,color .18s,transform .12s}
+.btn:active,.tab:active,.seg button:active{transform:scale(.96)}
+/* Modo 2 pantallas: qué se ve en el proyector */
+.proy{display:flex;align-items:center;gap:8px;opacity:0;transform:translateX(8px);transition:opacity .25s,transform .25s;pointer-events:none}
+.proy.on{opacity:1;transform:none;pointer-events:auto}
+.proy[hidden]{display:none}
+.proy .lbl{font-size:11px;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.proy .lbl i{font-style:normal;display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--err);margin-right:6px;box-shadow:0 0 8px var(--err);animation:vivo 1.6s ease-in-out infinite}
+@keyframes vivo{50%{opacity:.35}}
+.seg{display:flex;padding:3px;gap:3px;border:1px solid var(--line);border-radius:10px;background:#160e0c}
+.seg button{height:28px;padding:0 12px;border:0;border-radius:7px;background:transparent;color:var(--mut);font:600 13px "Segoe UI",system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-pressed="true"]{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff}
+.aviso2{font-size:11px;color:var(--warn);max-width:170px;line-height:1.3}
+body.proy-on .marca{display:none}
+@media (max-width:1500px){body.proy-on .btn .t{display:none}}
+@media (max-width:1180px){.btn .t{display:none}}
+@media (prefers-reduced-motion:reduce){.proy{transition:none}.proy .lbl i{animation:none}}
 </style>
 </head>
 <body>
@@ -33,8 +51,17 @@ img{width:32px;height:32px}
   <button class="tab on" type="button" data-v="liga">🏆 Liga</button>
   <button class="tab" type="button" data-v="bot"><span class="dot" id="dot"></span>Bot de WhatsApp</button>
   <span class="sp"></span>
-  <button class="btn tv" type="button" id="tv" title="Abre la pantalla para la TV (en el segundo monitor, si está conectado). F11 = pantalla completa">📺 Pantalla TV</button>
-  <button class="btn" type="button" id="pub" title="Abre en el navegador la página que ven los jugadores">🌐 Página de jugadores</button>
+  <div class="proy" id="proy" hidden>
+    <span class="lbl"><i></i>En el proyector</span>
+    <div class="seg" role="group" aria-label="Qué se ve en el proyector">
+      <button type="button" data-proy="live" aria-pressed="true" title="Mesas, reloj y standing">🃏 Mesas y reloj</button>
+      <button type="button" data-proy="sorteo" aria-pressed="false" title="Ruleta del sorteo. Al girar desde aquí, el proyector se pasa solo a la ruleta">🎡 Ruleta</button>
+    </div>
+    <span class="aviso2" id="aviso2" hidden>Sin 2ª pantalla: lleva la ventana al proyector y toca ⛶</span>
+    <button class="btn ic" type="button" id="completa" title="Pantalla completa en el proyector">⛶</button>
+  </div>
+  <button class="btn tv" type="button" id="tv" title="Separa en 2 pantallas: aquí quedan los controles y en el segundo monitor (proyector o TV) se ve la vista para el público">🖥️ 2 pantallas</button>
+  <button class="btn" type="button" id="pub" title="Abre en el navegador la página que ven los jugadores">🌐<span class="t"> Página de jugadores</span></button>
   <button class="btn ic" type="button" id="rec" title="Recargar">↻</button>
 <script>
 const $ = id => document.getElementById(id);
@@ -42,11 +69,28 @@ document.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", a
   await bot.vista(b.dataset.v);
   document.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
 }));
-$("tv").addEventListener("click", async () => { const on = await bot.pantalla(); $("tv").classList.toggle("on", !!on); $("tv").textContent = on ? "📺 Cerrar pantalla TV" : "📺 Pantalla TV"; });
+function pintarPantalla(d){
+  const on = !!(d && d.on);
+  document.body.classList.toggle("proy-on", on);
+  $("tv").classList.toggle("on", on); $("tv").textContent = on ? "✕ Dejar de proyectar" : "🖥️ 2 pantallas";
+  const p = $("proy");
+  if (on){ p.hidden = false; requestAnimationFrame(() => p.classList.add("on")); }
+  else { p.classList.remove("on"); setTimeout(() => { if (!p.classList.contains("on")) p.hidden = true; }, 260); }
+  if (!on) return;
+  document.querySelectorAll("[data-proy]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.proy === (d.vista === "sorteo" ? "sorteo" : "live"))));
+  $("aviso2").hidden = !!d.segunda || !!d.completa;
+  $("completa").title = d.completa ? "Salir de pantalla completa" : "Pantalla completa en el proyector";
+}
+$("tv").addEventListener("click", async () => { await bot.pantalla(); });
+document.querySelectorAll("[data-proy]").forEach(b => b.addEventListener("click", async () => {
+  document.querySelectorAll("[data-proy]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  await bot.proyectar(b.dataset.proy);
+}));
+$("completa").addEventListener("click", () => bot.pantallaCompleta());
 $("pub").addEventListener("click", () => bot.publica());
 $("rec").addEventListener("click", () => bot.recargar());
 bot.on("vista", v => document.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x.dataset.v === v)));
-bot.on("pantalla", on => { $("tv").classList.toggle("on", !!on); $("tv").textContent = on ? "📺 Cerrar pantalla TV" : "📺 Pantalla TV"; });
+bot.on("pantalla", pintarPantalla);
 const color = s => s === "listo" ? "ok" : ["desconectado", "fallo", "error"].includes(s) ? "err" : "warn";
 const titulo = s => ({listo: "Bot conectado", vincular: "Falta vincular WhatsApp", desconectado: "Bot desconectado", fallo: "No se pudo iniciar sesión", error: "Error en el bot", reiniciando: "Bot reiniciándose"}[s] || "Conectando el bot…");
 bot.on("estado", d => { $("dot").className = "dot " + color(d.s); $("dot").title = titulo(d.s); });

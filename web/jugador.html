@@ -791,6 +791,7 @@ body.portal #sampleBanner{display:none!important}
 /* Fuego alrededor de la ruleta mientras gira: capa detrás de la rueda, más grande que ella */
 #fuego{position:absolute;inset:-16%;width:132%;height:132%;pointer-events:none;z-index:2}
 /* las puntas del fuego se desvanecen antes del borde de su capa: nunca se ve un corte recto */
+body.tv-app .tv-bar,body.tv-app #btnSpin,body.tv-app #sorteoModo,body.tv-app .sorteo-filtros,body.tv-app #filtCard{display:none!important}
 #fuego{-webkit-mask-image:radial-gradient(closest-side,#000 80%,transparent 100%);mask-image:radial-gradient(closest-side,#000 80%,transparent 100%)}
 #wheel{position:relative;z-index:1}
 
@@ -1374,6 +1375,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   // Portal de jugadores: mismo link terminado en #jugador. Muestra solo lo del jugador, sin controles de organizador.
   const PORTAL = true;
   const ADMUI = () => M.admin && !PORTAL;
+  // Ventana de proyección de la app de escritorio (modo 2 pantallas): muestra lo que elige el organizador desde la otra pantalla
+  const TV_APP = !PORTAL && !!new URLSearchParams(location.search).get("pantalla");
+  let tvSpinVisto;
+  let canalTV = null;   // enlace directo entre el panel de control y la proyección (mismo PC): llega al instante y funciona sin internet   // último giro de ruleta visto por la proyección (para saltar sola a la ruleta cuando alguien gira)
   let sanc = {};   // sanciones del juez (tabla "sanciones")
   let pub = {};    // perfil público de cada cuenta: {apodo, avatar, nombre} (tabla "perfil_publico")
   let juecesIds = new Set();   // cuentas con rol de juez (tabla "jueces")
@@ -1654,6 +1659,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   function commit(){
     if (M.mode === "local"){ try { localStorage.setItem(LKEY, JSON.stringify(S)); } catch(e){} }
+    if (canalTV && !TV_APP && M.admin) try { canalTV.postMessage({S: JSON.parse(JSON.stringify(S))}); } catch(e){}
+    if (M.mode === "local"){}
     else if (M.mode === "live" && M.admin){
       M.db.doc(STATE_DOC).set(JSON.parse(JSON.stringify(S))).catch(e => { $("adminErr").textContent = "No se pudo guardar: " + (e && e.message || e); });
     }
@@ -2687,6 +2694,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (v === "salon") renderSalon();
     // La sección queda en la dirección (#salon, #estadisticas…) para que al cambiar de liga o recargar se mantenga
     try { history.replaceState(null, "", location.pathname + location.search + (VISTA_HASH[v] || "")); } catch(e){}
+    if (TV_APP) try { window.desafioTV && window.desafioTV.vista(v); } catch(e){}
   }
   const VISTA_HASH = {stats:"#estadisticas", sorteo:"#sorteo", salon:"#salon", reglas:"#reglas", warn:"#warnings", live:""};
   let vistaPendiente = null;   // sorteo/warnings: se abren cuando se confirma que es organizador
@@ -4254,7 +4262,17 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   // Mientras la ruleta gira no se redibuja la página (llegan avisos de la base de datos justo al girar y trababan la animación);
   // lo pendiente se dibuja apenas se detiene.
   let renderPend = false;
+  // En la proyección, cuando el organizador gira la ruleta desde la otra pantalla, se pasa sola a la ruleta
+  function tvSigueRuleta(){
+    if (!TV_APP || !S) return;
+    const sp = modoFinal() ? (S.sorteoFinal || {}).spin : (S.sorteo || {}).spin, id = sp ? sp.id : null;
+    if (tvSpinVisto === undefined){ tvSpinVisto = id; return; }   // lo que ya estaba al abrir la proyección no cuenta
+    if (!sp || id === tvSpinVisto) return;
+    tvSpinVisto = id;
+    if (Date.now() - (sp.at || 0) < 20000 && view !== "sorteo") setTimeout(() => setView("sorteo"), 0);
+  }
   function render(){
+    try { tvSigueRuleta(); } catch(e){}
     if (spinning && view === "sorteo"){ renderPend = true; return; }
     if (autoPend) autoCalendario();
     renderPend = false;
@@ -5623,7 +5641,14 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     tvStep($("tables"), $("tables").children, $("tvMesas"));
     tvStep(document.querySelector("#mainGrid .stand-scroll"), document.querySelectorAll("#standBody tr"), $("tvStand"), (document.querySelector("#mainGrid .stand thead") || {offsetHeight:0}).offsetHeight);
   }, TV_MS);
-  const PANTALLA_APP = !PORTAL && !!new URLSearchParams(location.search).get("pantalla");
+  const PANTALLA_APP = TV_APP;
+  try { if (!PORTAL && window.BroadcastChannel) canalTV = new BroadcastChannel("desafio-proyeccion:" + LIGA); } catch(e){}
+  if (TV_APP && canalTV) canalTV.onmessage = e => { try { if (e.data && e.data.S){ S = normalize(e.data.S); render(); } } catch(err){} };
+  if (TV_APP){
+    document.body.classList.add("tv-app");
+    // la app de escritorio cambia lo que se proyecta: "live" (mesas, reloj y standing) o "sorteo" (ruleta)
+    window.__proyectar = v => { if (v !== "live" && v !== "sorteo") return view; if (!document.body.classList.contains("display")) $("btnDisplay").click(); setView(v); return view; };
+  }
   $("btnDisplay").addEventListener("click", () => {
     const on = document.body.classList.toggle("display");
     if (on){ setView(view === "warn" ? "live" : view); tvLabel(); focus = null; ["tables"].forEach(id => $(id).scrollTop = 0); const ss = document.querySelector("#mainGrid .stand-scroll"); if (ss) ss.scrollTop = 0; $("tvMesas").textContent = ""; $("tvStand").textContent = ""; render(); }

@@ -31,6 +31,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "preload-tv.js",
       "ui/**",
       "bot/**",
       "web/**",

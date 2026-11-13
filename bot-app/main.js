@@ -160,6 +160,11 @@ function crearVentana() {
   vBarra.webContents.loadFile(path.join(__dirname, "ui", "barra.html"));
   vBot.webContents.loadFile(path.join(__dirname, "ui", "index.html"));
   vLiga.webContents.loadURL(URL_LIGA + "index.html");
+  // si el organizador cambia de liga (Precon ↔ Bracket 3), la proyección la sigue
+  vLiga.webContents.on("did-navigate", (e, url) => {
+    const l = ligaDeUrl(url);
+    if (l && tv && !tv.isDestroyed() && l !== tvLiga){ tvLiga = l; tvVista = "live"; tv.loadURL(URL_LIGA + "index.html?pantalla=1" + (l ? "&liga=" + encodeURIComponent(l) : "")); avisarPantalla(); }
+  });
   linksAfuera(vLiga.webContents);
   win.on("resize", acomodar); acomodar();
   global.__vistas = () => ({ win, vBarra, vLiga, vBot });   // para pruebas automáticas
@@ -172,20 +177,46 @@ function crearVentana() {
     saliendo = true; if (tv && !tv.isDestroyed()) tv.destroy(); await detenerBot(); app.quit();
   });
 }
-// Pantalla para la TV: ventana aparte, a pantalla completa en el segundo monitor si hay uno
+// Modo 2 pantallas: esta ventana queda con los controles y la proyección va en una ventana aparte,
+// a pantalla completa en el segundo monitor (proyector o TV). El organizador elige desde la barra qué se proyecta.
+let tvLiga = "", tvVista = "live";
+const ligaDeUrl = u => { try { return new URL(u).searchParams.get("liga") || ""; } catch (e) { return ""; } };
+const pantallaExtra = () => { const prin = screen.getPrimaryDisplay(); return screen.getAllDisplays().find(d => d.id !== prin.id) || null; };
+function avisarPantalla() {
+  if (!vivo(vBarra)) return;
+  const abierta = !!(tv && !tv.isDestroyed());
+  vBarra.webContents.send("pantalla", abierta ? { on: true, vista: tvVista, segunda: !!pantallaExtra(), completa: tv.isFullScreen() } : false);
+}
+function llevarASegunda() {
+  const otra = pantallaExtra(); if (!tv || tv.isDestroyed() || !otra) return;
+  tv.setFullScreen(false); tv.setBounds({ x: otra.bounds.x + 40, y: otra.bounds.y + 40, width: 1280, height: 760 }); tv.setFullScreen(true);
+}
 async function abrirPantalla() {
   if (tv && !tv.isDestroyed()) { tv.close(); return false; }
-  // la TV muestra la misma liga que está abierta en el panel (Precon o Bracket 3)
-  let liga = ""; try { liga = await vLiga.webContents.executeJavaScript('(document.getElementById("lnkOther") && new URL(document.getElementById("lnkOther").href).searchParams.get("liga")) || ""'); } catch (e) {}
-  const ds = screen.getAllDisplays(), prin = screen.getPrimaryDisplay(), otra = ds.find(d => d.id !== prin.id) || prin;
-  tv = new BrowserWindow({ x: otra.bounds.x + 40, y: otra.bounds.y + 40, width: 1280, height: 760, backgroundColor: "#000", title: "Pantalla · Liga El Desafío", icon: path.join(__dirname, "ui", "logo.png"), autoHideMenuBar: true,
-    fullscreen: otra.id !== prin.id, webPreferences: { contextIsolation: true } });
+  // la proyección muestra la misma liga que está abierta en el panel (Precon o Bracket 3)
+  let liga = ligaDeUrl(vLiga.webContents.getURL());
+  if (!liga) try { liga = await vLiga.webContents.executeJavaScript('(document.getElementById("lnkOther") && new URL(document.getElementById("lnkOther").href).searchParams.get("liga")) || ""'); } catch (e) {}
+  tvLiga = liga; tvVista = "live";
+  const prin = screen.getPrimaryDisplay(), otra = pantallaExtra() || prin;
+  tv = new BrowserWindow({ x: otra.bounds.x + 40, y: otra.bounds.y + 40, width: 1280, height: 760, backgroundColor: "#000", title: "Proyección · Liga El Desafío", icon: path.join(__dirname, "ui", "logo.png"), autoHideMenuBar: true,
+    fullscreen: otra.id !== prin.id, webPreferences: { contextIsolation: true, preload: path.join(__dirname, "preload-tv.js") } });
   tv.loadURL(URL_LIGA + "index.html?pantalla=1" + (liga ? "&liga=" + encodeURIComponent(liga) : ""));
+  tv.on("enter-full-screen", avisarPantalla); tv.on("leave-full-screen", avisarPantalla);
+  setTimeout(avisarPantalla, 50);
   linksAfuera(tv.webContents);
   tv.webContents.on("before-input-event", (e, i) => { if (i.type === "keyDown" && (i.key === "F11" || (i.key === "Escape" && tv.isFullScreen()))) { e.preventDefault(); tv.setFullScreen(i.key === "F11" ? !tv.isFullScreen() : false); } });
-  tv.on("closed", () => { tv = null; if (vivo(vBarra)) vBarra.webContents.send("pantalla", false); });
+  tv.on("closed", () => { tv = null; avisarPantalla(); });
   return true;
 }
+// Qué muestra la proyección: "live" (mesas, reloj y standing) o "sorteo" (ruleta)
+async function proyectar(v) {
+  if (!tv || tv.isDestroyed()) return null;
+  try { tvVista = await tv.webContents.executeJavaScript(`window.__proyectar ? window.__proyectar(${JSON.stringify(v)}) : null`) || tvVista; } catch (e) {}
+  avisarPantalla(); return tvVista;
+}
+ipcMain.on("tv:vista", (e, v) => { if (tv && !tv.isDestroyed() && e.sender === tv.webContents) { tvVista = v; avisarPantalla(); } });
+ipcMain.handle("tv:mostrar", (e, v) => proyectar(v));
+ipcMain.handle("tv:completa", () => { if (!tv || tv.isDestroyed()) return false; if (pantallaExtra() && !tv.isFullScreen()) llevarASegunda(); else tv.setFullScreen(!tv.isFullScreen()); return tv.isFullScreen(); });
 // Si hay que vincular WhatsApp, se muestra la pestaña del bot para que se vea el código
 function verBot() { if (vistaAct !== "bot" && win) { vistaAct = "bot"; acomodar(); if (vivo(vBarra)) vBarra.webContents.send("vista", "bot"); } }
 ipcMain.handle("vista", (e, v) => { vistaAct = v === "bot" ? "bot" : "liga"; acomodar(); return vistaAct; });
@@ -220,7 +251,10 @@ ipcMain.handle("desvincular", async () => {
 app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
 // La ventana principal es una BaseWindow: los diálogos se anclan a ella
 app.whenReady().then(async () => {
-  powerSaveBlocker.start("prevent-display-sleep");   // que el PC y la pantalla no se duerman durante el evento
+  powerSaveBlocker.start("prevent-display-sleep");
+  // si se conecta el proyector con la proyección ya abierta, se va sola a esa pantalla
+  screen.on("display-added", () => { setTimeout(() => { if (tv && !tv.isDestroyed()) llevarASegunda(); avisarPantalla(); }, 800); });
+  screen.on("display-removed", () => setTimeout(avisarPantalla, 300));   // que el PC y la pantalla no se duerman durante el evento
   URL_LIGA = await servidorLiga();
   crearVentana();
   carpeta = await elegirCarpeta(false);

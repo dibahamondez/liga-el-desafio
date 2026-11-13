@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld("bot", {
   desvincular: () => ipcRenderer.invoke("desvincular"),
   vista: v => ipcRenderer.invoke("vista", v),
   pantalla: () => ipcRenderer.invoke("pantalla"),
+  proyectar: v => ipcRenderer.invoke("tv:mostrar", v),
+  pantallaCompleta: () => ipcRenderer.invoke("tv:completa"),
   recargar: () => ipcRenderer.invoke("recargar"),
   publica: () => ipcRenderer.invoke("publica"),
   on: (canal, fn) => ipcRenderer.on(canal, (e, d) => fn(d))
