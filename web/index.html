@@ -445,6 +445,72 @@ tbody tr td{transition:background-color .15s}
 }
 body.display #mainGrid,body.display .clock{animation:none}
 #genBox[hidden]{display:none}
+/* ---------- Mesa en juego (contador de vidas) ---------- */
+body.cnt-on{overflow:hidden}
+#cnt{position:fixed;inset:0;z-index:300;background:#000;touch-action:manipulation;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+.cnt-grid{position:absolute;inset:0;display:grid;gap:8px;padding:6px}
+.cnt-pnl{position:relative;overflow:hidden;border-radius:22px;background:#1c1412;min-width:0;min-height:0}
+.cnt-bg{position:absolute;inset:0;display:flex}
+.cnt-bg i{flex:1;background-size:cover;background-position:center;filter:saturate(1.05)}
+.cnt-bg.vacio{background:radial-gradient(circle at 30% 20%,#4a2018,#1a0f0d 70%)}
+.cnt-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.35))}
+.cnt-pnl.fuera .cnt-bg{filter:grayscale(1) brightness(.35)}
+.cnt-pnl.atk .cnt-bg::after{background:rgba(10,6,20,.55)}
+.cnt-pnl.victima .cnt-bg{filter:brightness(.3)}
+.cnt-in{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(var(--rot));display:flex;align-items:center;justify-content:center;color:#fff}
+.cnt-nm{position:absolute;top:10px;left:0;right:0;text-align:center;font:700 15px var(--f-display,system-ui);letter-spacing:.06em;text-transform:uppercase;text-shadow:0 2px 6px rgba(0,0,0,.8);pointer-events:none}
+.cnt-num{font:800 clamp(64px,22vmin,170px)/1 var(--f-num,system-ui);text-shadow:0 4px 18px rgba(0,0,0,.6);pointer-events:none;font-variant-numeric:tabular-nums}
+.cnt-num.cmd{font-size:clamp(48px,15vmin,120px)}
+.cnt-num.letal{color:#ff6b55}
+.cnt-in .z{position:absolute;top:0;bottom:0;width:50%;background:transparent;border:0;color:rgba(255,255,255,.55);font:700 34px system-ui;display:flex;align-items:center;padding:0 7%;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cnt-in .z.zm{left:0;justify-content:flex-start}
+.cnt-in .z.zp{right:0;justify-content:flex-end}
+.cnt-in .z:active{background:rgba(255,255,255,.08)}
+.cnt-delta{position:absolute;top:22%;font:700 26px var(--f-num,system-ui);opacity:0;transition:opacity .2s;text-shadow:0 2px 6px #000;pointer-events:none}
+.cnt-delta.on{opacity:1}
+.cnt-ic{position:absolute;bottom:10px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.45);color:#fff;font-size:17px;display:grid;place-items:center;cursor:pointer;z-index:2}
+.cnt-ic.cmdb{left:calc(50% - 46px)}
+.cnt-ic.cntb{left:calc(50% + 8px)}
+.cnt-chips{position:absolute;top:34px;left:0;right:0;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.cnt-chip{background:rgba(0,0,0,.55);border-radius:999px;padding:2px 9px;font:700 13px system-ui}
+.cnt-chip.veneno{color:#8dff7a}
+.cnt-cmdyo{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.cnt-cmdyo b{font:800 clamp(22px,7vmin,40px)/1 var(--f-display,system-ui);text-transform:uppercase}
+.cnt-cmdyo span{font:600 15px system-ui;opacity:.8;text-transform:uppercase;letter-spacing:.05em}
+.cnt-volver{margin-top:10px;background:var(--gold,#e9b44c);color:#1a0d0b;border:0;border-radius:999px;padding:10px 20px;font:800 14px system-ui;text-transform:uppercase;cursor:pointer}
+.cnt-cmdatk{position:absolute;inset:0;display:flex}
+.cnt-cmdcol{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.cnt-cmdatk.dos .cnt-cmdcol+.cnt-cmdcol{border-left:1px dashed rgba(255,255,255,.3)}
+.cnt-cmdcol small{max-width:90%;font:600 11px system-ui;opacity:.75;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnt-cmdcol .z{width:50%}
+.cnt-muerto,.cnt-elim{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:0 12px;z-index:2}
+.cnt-muerto b{font:800 clamp(26px,9vmin,48px)/1 var(--f-display,system-ui);text-transform:uppercase;color:#ff6b55;letter-spacing:.04em}
+.cnt-elim b{font:800 20px var(--f-display,system-ui);text-transform:uppercase}
+.cnt-opts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.cnt-opts.col{flex-direction:column;align-items:stretch}
+.cnt-mini{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:999px;padding:8px 13px;font:700 13px system-ui;cursor:pointer}
+.cnt-mini.on{background:var(--red,#c8321a);border-color:#ff8a70}
+.cnt-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:84px;height:84px;border-radius:24px;border:2px solid rgba(233,180,76,.8);background:#0b0807;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;z-index:5;box-shadow:0 0 0 6px #000;cursor:pointer}
+.cnt-hub b{font:800 19px var(--f-num,system-ui);font-variant-numeric:tabular-nums}
+.cnt-hub i{font-style:normal;font-size:15px;opacity:.7}
+.cnt-hub.tarde b{color:#ff6b55}
+.cnt-hub.pausa b{opacity:.65}
+.cnt-fin,.cnt-modal{position:absolute;inset:0;z-index:10;background:rgba(5,3,2,.82);display:grid;place-items:center;padding:20px}
+.cnt-fin>div{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;max-width:420px}
+.cnt-fin span{color:var(--gold,#e9b44c);letter-spacing:.14em;text-transform:uppercase;font:700 13px system-ui}
+.cnt-fin b{font:800 clamp(30px,9vmin,54px)/1.05 var(--f-display,system-ui);text-transform:uppercase;color:#fff}
+.cnt-fin p{color:#cdbdb5;margin:0}
+.cnt-card{background:#17100e;border:1px solid #3a2a25;border-radius:18px;padding:20px;width:min(420px,100%);color:#fff;max-height:90vh;overflow:auto}
+.cnt-card h3{margin:0 0 8px}
+.cnt-fila{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #2c201c}
+.cnt-fila span{flex:1;font-weight:600}
+.cnt-fila b{min-width:34px;text-align:center;font:800 22px var(--f-num,system-ui)}
+.cnt-fila button{width:40px;height:40px;border-radius:10px;border:1px solid #3a2a25;background:#211714;color:#fff;font:700 20px system-ui;cursor:pointer}
+.cnt-aviso{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(23,16,14,.95);border:1px solid var(--gold,#e9b44c);border-radius:12px;padding:8px 14px;color:#fff;font:600 13px system-ui;z-index:6;text-align:center;max-width:90%}
+.btn-contador{width:100%;margin:10px 0 4px;padding:14px 18px;font-size:16px}
+/* En la página de jugadores, el standing de la fecha lo ve solo el organizador */
+body.portal #mainGrid{display:none!important}
+
 /* Sorteo final de la liga */
 #sorteoModo button[aria-pressed=true]{background:var(--red);color:#fff}
 .ff-fecha{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--surface-2)}
@@ -4317,6 +4383,232 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     box.innerHTML = `<details class="adm-sec"${ab ? " open" : ""}><summary><span><b>Inscribir a alguien que llegó tarde</b><small>Entra con 0 puntos y juega desde la próxima ronda${n ? ` · Tardíos en esta fecha: ${n}` : ""}</small></span></summary><div class="adm-sec-body"><p class="note" style="margin:0">Si hay una mesa de 3 o quieres sentarlo ya, después de inscribirlo arrástralo desde “Sin mesa” a una mesa de la ronda actual.</p>${regFormHTML("rgL", null)}</div></details>`;
   }
   $("lateBox").addEventListener("click", e => { if (e.target.closest('[data-reg-save="rgL"]')) saveReg("rgL"); });
+  /* ---------- Mesa en juego: contador de vidas en el celular (portal de jugadores) ----------
+     Un celular al centro de la mesa: cada jugador ve su panel girado hacia él, con la ilustración de su comandante.
+     Vidas, daño de comandante (deslizando sobre un panel o con ⚔), veneno, experiencia, energía e impuesto de comandante.
+     Cada vez que alguien queda eliminado se pregunta quién lo eliminó (solo si fue por daño o daño de comandante)
+     y el reporte de la mesa se va enviando solo: kills, eliminados y, al final, el ganador. */
+  const CNT_VIDA = 40, CNT_CMD = 21, CNT_VENENO = 10;
+  let CNT = null, cntKey = null, cntTi = null, cntVista = null, cntTimer = 0, cntLock = null, cntModal = null;
+  const cntCorto = pid => { const n = pname(pid).trim().split(/\s+/); return n.length > 1 ? n[0] + " " + n[n.length - 1][0] + "." : n[0]; };
+  const cntCmds = pid => { const d = deckOf(pid); const nm = d ? (d.c || (DECK[d.k] && DECK[d.k].cmd) || "") : ""; return String(nm).split(" + ").map(x => x.trim()).filter(Boolean); };
+  const cntVivos = () => CNT.seats.filter(p => !CNT.out[p]);
+  function cntGuardar(){ try { localStorage.setItem(cntKey, JSON.stringify(CNT)); } catch(e){} }
+  function cntAbrir(ti){
+    const t = S && S.rounds[S.cur] && S.rounds[S.cur].tables[ti]; if (!t) return;
+    cntTi = ti; cntKey = `__mesa:${LIGA}:${S.fecha || ""}:${S.cur}:${ti}`;
+    let g = null; try { g = JSON.parse(localStorage.getItem(cntKey) || "null"); } catch(e){}
+    if (!g || JSON.stringify(g.seats) !== JSON.stringify(t.seats)){
+      g = {seats: t.seats.slice(), life: {}, cmd: {}, cnt: {}, out: {}, orden: 0, inicio: Date.now()};
+      t.seats.forEach(p => { g.life[p] = CNT_VIDA; g.cnt[p] = {veneno: 0, exp: 0, energia: 0, impuesto: 0}; g.cmd[p] = {}; });
+    }
+    CNT = g; cntVista = null; cntModal = null; cntGuardar();
+    let el = $("cnt");
+    if (!el){ el = document.createElement("div"); el.id = "cnt"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Contador de la mesa"); document.body.appendChild(el); cntEventos(el); }
+    el.hidden = false; document.body.classList.add("cnt-on");
+    // Pantalla completa, vertical y sin que se apague (si el celular lo permite)
+    try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({navigationUI: "hide"}); if (r && r.then) r.then(() => { try { screen.orientation.lock("portrait").catch(() => {}); } catch(e){} }).catch(() => {}); } catch(e){}
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(l => cntLock = l).catch(() => {}); } catch(e){}
+    cntPintar(); clearInterval(cntTimer); cntTimer = setInterval(cntReloj, 1000);
+  }
+  function cntCerrar(){
+    const el = $("cnt"); if (el) el.hidden = true; document.body.classList.remove("cnt-on");
+    clearInterval(cntTimer);
+    try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch(e){}
+    try { if (cntLock) cntLock.release(); } catch(e){} cntLock = null;
+    render();
+  }
+  function cntReloj(){
+    const h = document.querySelector("#cnt .cnt-hub b"); if (!h || !S) return;
+    const ms = remaining(); h.textContent = fmt(ms); h.parentElement.classList.toggle("tarde", ms < 0); h.parentElement.classList.toggle("pausa", !S.timer.running);
+    // las ilustraciones llegan de Scryfall de a poco: se repinta cuando aparece alguna
+    if (document.querySelector("#cnt [data-sinarte]") && CNT.seats.some(p => cntCmds(p).some(c => artUrl(c)))) cntPintar();
+  }
+  // Orientación de cada panel: el contenido mira hacia el jugador sentado en ese lado de la mesa
+  function cntLayout(n, ancho, alto){
+    const hor = ancho > alto;
+    if (n <= 2) return {cols: 1, rows: 2, rot: [180, 0], area: [[0, 0], [1, 0]]};
+    if (!hor){
+      if (n === 3) return {cols: 2, rows: 2, rot: [90, -90, 90], area: [[0, 0], [0, 1, 2], [1, 0]]};
+      if (n === 4) return {cols: 2, rows: 2, rot: [90, -90, -90, 90], area: [[0, 0], [0, 1], [1, 1], [1, 0]]};
+      const r = Math.ceil(n / 2); return {cols: 2, rows: r, rot: Array.from({length: n}, (_, i) => i < r ? 90 : -90), area: Array.from({length: n}, (_, i) => i < r ? [i, 0] : [n - 1 - i, 1])};
+    }
+    if (n === 3) return {cols: 2, rows: 2, rot: [180, 0, 0], area: [[0, 0, 2], [1, 1], [1, 0]]};
+    const c = Math.ceil(n / 2); return {cols: c, rows: 2, rot: Array.from({length: n}, (_, i) => i < c ? 180 : 0), area: Array.from({length: n}, (_, i) => i < c ? [0, i] : [1, n - 1 - i])};
+  }
+  function cntPanel(pid, i, L){
+    const [r, c, span] = L.area[i], rot = L.rot[i], vivo = !CNT.out[pid], cmds = cntCmds(pid);
+    const arts = cmds.map(n => artUrl(n)).filter(Boolean);
+    const fondo = arts.length > 1 ? `<span class="cnt-bg dos"><i style="background-image:url('${esc(arts[0])}')"></i><i style="background-image:url('${esc(arts[1])}')"></i></span>`
+      : arts[0] ? `<span class="cnt-bg"><i style="background-image:url('${esc(arts[0])}')"></i></span>` : `<span class="cnt-bg vacio" data-sinarte="1"></span>`;
+    const grid = `grid-row:${r + 1}${span ? " / span " + span : ""};grid-column:${c + 1}`;
+    const k = CNT.cnt[pid] || {}, chips = [["veneno", "☠"], ["exp", "✦"], ["energia", "⚡"], ["impuesto", "⟳"]].filter(([x]) => k[x]).map(([x, ic]) => `<span class="cnt-chip ${x}">${ic} ${k[x]}</span>`).join("");
+    let cuerpo;
+    const enCmd = cntVista && cntVista !== pid ? cntVista : null;
+    if (cntVista === pid){
+      cuerpo = `<div class="cnt-cmdyo"><b>Daño de comandante</b><span>que has recibido</span><button type="button" class="cnt-volver" data-cnt="volver">Volver al juego</button></div>`;
+    } else if (enCmd){
+      // daño que este jugador (atacante) le hizo a quien abrió la vista de comandante
+      const partes = (cmds.length ? cmds : ["Comandante"]).slice(0, 2);
+      cuerpo = `<div class="cnt-cmdatk ${partes.length > 1 ? "dos" : ""}">${partes.map((nm, ci) => {
+        const v = ((CNT.cmd[enCmd] || {})[pid] || {})[ci] || 0;
+        return `<div class="cnt-cmdcol"><button type="button" class="z zm" data-cnt="cmd-" data-p="${pid}" data-ci="${ci}" aria-label="Quitar daño">−</button><div class="cnt-num cmd ${v >= CNT_CMD ? "letal" : ""}">${v}</div><small>${esc(nm)}</small><button type="button" class="z zp" data-cnt="cmd+" data-p="${pid}" data-ci="${ci}" aria-label="Sumar daño">+</button></div>`; }).join("")}</div>`;
+    } else if (!vivo){
+      const o = CNT.out[pid];
+      cuerpo = `<div class="cnt-muerto"><b>Eliminado</b><span>${o.by ? "por " + esc(cntCorto(o.by)) : o.como === "veneno" ? "por veneno" : "sin ejecutor"}</span><button type="button" class="cnt-mini" data-cnt="revivir" data-p="${pid}">Deshacer</button></div>`;
+    } else if (CNT.pend && CNT.pend.pid === pid){
+      const otros = cntVivos().filter(x => x !== pid), sug = CNT.pend.sug;
+      cuerpo = CNT.pend.como === "veneno" ? `<div class="cnt-elim"><b>¿Eliminado por veneno?</b><div class="cnt-opts"><button type="button" class="cnt-mini on" data-cnt="elim" data-p="${pid}" data-by="">Sí, eliminado</button><button type="button" class="cnt-mini" data-cnt="noelim" data-p="${pid}">No, me equivoqué</button></div></div>`
+        : `<div class="cnt-elim"><b>¿Quién te eliminó?</b><div class="cnt-opts">${otros.map(x => `<button type="button" class="cnt-mini ${x === sug ? "on" : ""}" data-cnt="elim" data-p="${pid}" data-by="${x}">${esc(cntCorto(x))}</button>`).join("")}<button type="button" class="cnt-mini" data-cnt="elim" data-p="${pid}" data-by="">Nadie / otra causa</button><button type="button" class="cnt-mini" data-cnt="noelim" data-p="${pid}">Me equivoqué</button></div></div>`;
+    } else {
+      cuerpo = `<button type="button" class="z zm" data-cnt="v-" data-p="${pid}" aria-label="Restar vida a ${esc(pname(pid))}"><span>−</span></button>
+        <div class="cnt-num">${CNT.life[pid]}</div><span class="cnt-delta" data-delta="${pid}"></span>
+        <button type="button" class="z zp" data-cnt="v+" data-p="${pid}" aria-label="Sumar vida a ${esc(pname(pid))}"><span>+</span></button>
+        <button type="button" class="cnt-ic cmdb" data-cnt="vercmd" data-p="${pid}" aria-label="Daño de comandante recibido" title="Daño de comandante">⚔</button>
+        <button type="button" class="cnt-ic cntb" data-cnt="contadores" data-p="${pid}" aria-label="Veneno, experiencia y más" title="Veneno, experiencia, energía">☠</button>`;
+    }
+    return `<div class="cnt-pnl${vivo ? "" : " fuera"}${enCmd ? " atk" : ""}${cntVista === pid ? " victima" : ""}" data-pnl="${pid}" style="${grid}" data-rot="${rot}">${fondo}
+      <div class="cnt-in" style="--rot:${rot}deg"><span class="cnt-nm">${esc(cntCorto(pid))}</span>${cuerpo}<span class="cnt-chips">${chips}</span></div></div>`;
+  }
+  function cntPintar(){
+    const el = $("cnt"); if (!el || !CNT) return;
+    const W = window.innerWidth, H = window.innerHeight, L = cntLayout(CNT.seats.length, W, H);
+    const t = S && S.rounds[S.cur] && S.rounds[S.cur].tables[cntTi];
+    const vivos = cntVivos(), gano = vivos.length === 1 && CNT.seats.length > 1 ? vivos[0] : null;
+    el.innerHTML = `<div class="cnt-grid" style="grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${CNT.seats.map((p, i) => cntPanel(p, i, L)).join("")}</div>
+      <button type="button" class="cnt-hub" data-cnt="menu" aria-label="Menú de la mesa"><b>${S ? fmt(remaining()) : "--:--"}</b><i>☰</i></button>
+      ${gano ? `<div class="cnt-fin"><div><span>Mesa ${cntTi + 1}</span><b>¡Gana ${esc(pname(gano))}!</b><p>El resultado ya quedó reportado. El organizador lo revisa y cierra la mesa.</p><div class="cnt-opts"><button type="button" class="btn primary" data-cnt="salir">Listo</button><button type="button" class="btn ghost" data-cnt="revivir" data-p="${esc(CNT.ultimo || "")}">Deshacer la última eliminación</button></div></div></div>` : ""}
+      ${t && t.result && !gano ? `<div class="cnt-aviso">El organizador ya cerró esta mesa: ${esc(resLabel(t.result, t.seats))}</div>` : ""}
+      ${cntModal ? cntModalHTML() : ""}`;
+    // tamaño del contenido girado: ancho y alto se intercambian cuando el panel gira 90°
+    el.querySelectorAll(".cnt-pnl").forEach(p => {
+      const r = Math.abs(+p.dataset.rot) === 90, inn = p.querySelector(".cnt-in"), w = p.clientWidth, h = p.clientHeight;
+      inn.style.width = (r ? h : w) + "px"; inn.style.height = (r ? w : h) + "px";
+    });
+  }
+  function cntModalHTML(){
+    if (cntModal.tipo === "menu"){
+      return `<div class="cnt-modal"><div class="cnt-card"><h3>Mesa ${cntTi + 1} · Ronda ${S.cur + 1}</h3>
+        <p class="msg">Vidas: toca + o − (mantén presionado para sumar rápido). Desliza sobre un panel o toca ⚔ para el daño de comandante; ☠ para veneno, experiencia y energía. El reporte se va enviando solo con cada eliminación.</p>
+        <div class="cnt-opts col">
+          <button type="button" class="btn primary" data-cnt="cerrarmodal">Volver a la partida</button>
+          <button type="button" class="btn ghost" data-cnt="tiempo">Se acabó el tiempo: terminar y reportar</button>
+          <button type="button" class="btn ghost" data-cnt="reiniciar">Reiniciar vidas (nueva partida)</button>
+          <button type="button" class="btn ghost" data-cnt="salir">Salir del contador (queda guardado)</button>
+        </div></div></div>`;
+    }
+    if (cntModal.tipo === "contadores"){
+      const p = cntModal.p, k = CNT.cnt[p];
+      const fila = (x, nm, ic) => `<div class="cnt-fila"><span>${ic} ${nm}</span><button type="button" data-cnt="c-" data-p="${p}" data-c="${x}" aria-label="Restar ${nm}">−</button><b>${k[x] || 0}</b><button type="button" data-cnt="c+" data-p="${p}" data-c="${x}" aria-label="Sumar ${nm}">+</button></div>`;
+      return `<div class="cnt-modal"><div class="cnt-card"><h3>${esc(pname(p))}</h3>
+        ${fila("veneno", "Veneno", "☠")}${fila("exp", "Experiencia", "✦")}${fila("energia", "Energía", "⚡")}${fila("impuesto", "Impuesto de comandante", "⟳")}
+        <p class="msg">Con ${CNT_VENENO} de veneno queda eliminado.</p>
+        <div class="cnt-opts col"><button type="button" class="btn primary" data-cnt="cerrarmodal">Listo</button></div></div></div>`;
+    }
+    if (cntModal.tipo === "confirmar"){
+      return `<div class="cnt-modal"><div class="cnt-card"><h3>${esc(cntModal.titulo)}</h3><p class="msg">${esc(cntModal.texto)}</p>
+        <div class="cnt-opts col"><button type="button" class="btn primary" data-cnt="${cntModal.si}">${esc(cntModal.ok)}</button><button type="button" class="btn ghost" data-cnt="cerrarmodal">Cancelar</button></div></div></div>`;
+    }
+    return "";
+  }
+  // ¿Quedó eliminado? vida en 0, 10 de veneno o 21 de un mismo comandante
+  function cntRevisar(pid){
+    if (CNT.out[pid] || (CNT.pend && CNT.pend.pid === pid)) return;
+    const dmg = CNT.cmd[pid] || {};
+    let peor = null, max = 0;
+    Object.keys(dmg).forEach(a => Object.values(dmg[a]).forEach(v => { if (v > max){ max = v; peor = a; } }));
+    if (max >= CNT_CMD) CNT.pend = {pid, como: "comandante", sug: peor};
+    else if ((CNT.cnt[pid].veneno || 0) >= CNT_VENENO) CNT.pend = {pid, como: "veneno"};
+    else if (CNT.life[pid] <= 0) CNT.pend = {pid, como: "vida", sug: max > 0 ? peor : null};
+  }
+  // El reporte de la mesa se arma con las eliminaciones y se envía (un jugador basta; el organizador lo revisa)
+  async function cntReportar(){
+    const myPid = M.uid ? links[M.uid] : null, t = S && S.rounds[S.cur] && S.rounds[S.cur].tables[cntTi];
+    if (!myPid || !t || !t.seats.includes(myPid) || t.result || !M.db) return;
+    const vivos = cntVivos(), k = {};
+    Object.values(CNT.out).forEach(o => { if (o.by) k[o.by] = (k[o.by] || 0) + 1; });
+    const prev = (votes[M.uid] && votes[M.uid].r === S.cur && votes[M.uid].t === cntTi && votes[M.uid].res) || {};
+    const d = {w: vivos.length === 1 ? vivos[0] : null, k, a: vivos.slice()};
+    if (B3){ d.j = prev.j || []; d.b = prev.b || {}; d.x = prev.x || []; }
+    try { await M.db.doc("votos/" + M.uid).set({r: S.cur, t: cntTi, pid: myPid, res: norm(d)}); } catch(e){}
+  }
+  function cntDelta(pid, n){
+    const s = document.querySelector(`#cnt [data-delta="${pid}"]`); if (!s) return;
+    s._v = (s._v || 0) + n; s.textContent = (s._v > 0 ? "+" : "") + s._v; s.classList.add("on");
+    clearTimeout(s._t); s._t = setTimeout(() => { s._v = 0; s.classList.remove("on"); }, 1400);
+  }
+  function cntAccion(b){
+    const a = b.dataset.cnt, p = b.dataset.p;
+    if (a === "v+" || a === "v-"){
+      CNT.life[p] += a === "v+" ? 1 : -1; cntRevisar(p); cntGuardar();
+      const n = document.querySelector(`#cnt [data-pnl="${p}"] .cnt-num`);
+      if (n && !(CNT.pend && CNT.pend.pid === p)){ n.textContent = CNT.life[p]; cntDelta(p, a === "v+" ? 1 : -1); } else cntPintar();
+      return;
+    }
+    if (a === "cmd+" || a === "cmd-"){
+      const v = cntVista, ci = +b.dataset.ci; if (!v) return;
+      const m = CNT.cmd[v][p] = CNT.cmd[v][p] || {}; const antes = m[ci] || 0, ahora = Math.max(0, antes + (a === "cmd+" ? 1 : -1));
+      m[ci] = ahora; CNT.life[v] -= ahora - antes; cntRevisar(v); cntGuardar();
+      if (CNT.pend && CNT.pend.pid === v) cntVista = null;
+      return cntPintar();
+    }
+    if (a === "vercmd"){ cntVista = p; return cntPintar(); }
+    if (a === "volver"){ cntVista = null; return cntPintar(); }
+    if (a === "contadores"){ cntModal = {tipo: "contadores", p}; return cntPintar(); }
+    if (a === "c+" || a === "c-"){ const c = b.dataset.c; CNT.cnt[p][c] = Math.max(0, (CNT.cnt[p][c] || 0) + (a === "c+" ? 1 : -1)); cntRevisar(p); cntGuardar(); if (CNT.pend && CNT.pend.pid === p) cntModal = null; return cntPintar(); }
+    if (a === "elim"){
+      CNT.orden = (CNT.orden || 0) + 1;
+      CNT.out[p] = {by: b.dataset.by || null, como: (CNT.pend && CNT.pend.como) || "vida", orden: CNT.orden}; CNT.ultimo = p; CNT.pend = null;
+      cntGuardar(); cntPintar(); cntReportar(); return;
+    }
+    if (a === "noelim"){
+      const como = CNT.pend && CNT.pend.como; CNT.pend = null;
+      if (como === "veneno") CNT.cnt[p].veneno = CNT_VENENO - 1; else if (CNT.life[p] <= 0) CNT.life[p] = 1;
+      if (como === "comandante") Object.values(CNT.cmd[p] || {}).forEach(m => Object.keys(m).forEach(ci => { if (m[ci] >= CNT_CMD) m[ci] = CNT_CMD - 1; }));
+      cntGuardar(); return cntPintar();
+    }
+    if (a === "revivir"){
+      if (!p || !CNT.out[p]) return;
+      delete CNT.out[p]; if (CNT.life[p] <= 0) CNT.life[p] = 1; if (CNT.cnt[p].veneno >= CNT_VENENO) CNT.cnt[p].veneno = CNT_VENENO - 1;
+      Object.values(CNT.cmd[p] || {}).forEach(m => Object.keys(m).forEach(ci => { if (m[ci] >= CNT_CMD) m[ci] = CNT_CMD - 1; }));
+      const ult = Object.keys(CNT.out).sort((x, y) => CNT.out[y].orden - CNT.out[x].orden)[0]; CNT.ultimo = ult || null;
+      cntGuardar(); cntPintar(); cntReportar(); return;
+    }
+    if (a === "menu"){ cntModal = {tipo: "menu"}; return cntPintar(); }
+    if (a === "cerrarmodal"){ cntModal = null; return cntPintar(); }
+    if (a === "tiempo"){ cntModal = {tipo: "confirmar", titulo: "¿Terminar la partida?", texto: `Se reporta la mesa con ${cntVivos().length} ${cntVivos().length === 1 ? "jugador vivo" : "jugadores vivos"} y las kills anotadas. Si alguien tiene que sumar o quitar algo, se corrige después en “Reportar resultado de la mesa”.`, ok: "Terminar y reportar", si: "tiempo-si"}; return cntPintar(); }
+    if (a === "tiempo-si"){ cntModal = null; cntReportar(); cntCerrar(); return; }
+    if (a === "reiniciar"){ cntModal = {tipo: "confirmar", titulo: "¿Reiniciar las vidas?", texto: "Todos vuelven a 40 y se borran contadores y eliminaciones del contador. Lo que ya se reportó no cambia hasta la próxima eliminación.", ok: "Reiniciar", si: "reiniciar-si"}; return cntPintar(); }
+    if (a === "reiniciar-si"){ localStorage.removeItem(cntKey); cntModal = null; const ti = cntTi; cntAbrir(ti); return; }
+    if (a === "salir"){ cntModal = null; cntCerrar(); return; }
+  }
+  function cntEventos(el){
+    // tocar + / −: mantener presionado suma o resta seguido
+    let rep = 0, repT = 0, ini = null, swipe = false;
+    const parar = () => { clearTimeout(repT); clearInterval(rep); rep = 0; };
+    el.addEventListener("pointerdown", e => {
+      ini = {x: e.clientX, y: e.clientY, pnl: e.target.closest(".cnt-pnl")}; swipe = false;
+      const z = e.target.closest('[data-cnt="v+"], [data-cnt="v-"]');
+      if (z){ repT = setTimeout(() => { rep = setInterval(() => { if (swipe) return parar(); cntAccion(z); z._hecho = true; }, 110); }, 450); }
+    });
+    el.addEventListener("pointermove", e => {
+      if (!ini || swipe) return;
+      if (Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 55 && ini.pnl){
+        swipe = true; parar();
+        const pid = ini.pnl.dataset.pnl;
+        if (!CNT.out[pid] && !(CNT.pend && CNT.pend.pid === pid)){ cntVista = cntVista === pid ? null : pid; cntPintar(); }
+      }
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => el.addEventListener(ev, () => { parar(); if (ev !== "pointerleave") ini = null; }));
+    el.addEventListener("click", e => {
+      const b = e.target.closest("[data-cnt]"); if (!b) return;
+      if (swipe){ swipe = false; return; }
+      if (b._hecho){ b._hecho = false; return; }
+      cntAccion(b);
+    });
+    window.addEventListener("resize", () => { if (!el.hidden) cntPintar(); });
+  }
+  document.addEventListener("click", e => { const b = e.target.closest("[data-contador]"); if (b) cntAbrir(+b.dataset.contador); });
   function renderMine(stand, tableOf, myPid){
     const box = $("mine");
     if (M.mode !== "live" || !M.uid){
@@ -4359,8 +4651,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         const key = "me:" + S.cur;
         ed = "<h3>Reportar resultado de la mesa</h3>" + editorHTML(key, t.seats, draftFor(key, t.seats, mine.res || (proposal(ti) || {}).res), mine.res ? "Actualizar reporte" : "Enviar reporte");
       }
+      const guardado = (() => { try { return !!localStorage.getItem(`__mesa:${LIGA}:${S.fecha || ""}:${S.cur}:${ti}`); } catch(e){ return false; } })();
+      const btnC = !t.result ? `<button type="button" class="btn primary btn-contador" data-contador="${ti}">${guardado ? "▶ Volver a la partida" : "▶ Iniciar mesa"}</button><p class="msg" style="margin:0 0 8px">Cuando estén todos listos, deja este celular al centro: cada uno ve sus vidas, daño de comandante y contadores, y el reporte se va llenando solo.</p>` : "";
       mesa = `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="big-table">Mesa ${ti + 1}</span><span class="msg">Ronda ${S.cur + 1}</span></div>
-        <ul class="vote-list">${list}</ul>${ed}${status}<span class="err" id="voteErr"></span>`;
+        <ul class="vote-list">${list}</ul>${btnC}${ed}${status}<span class="err" id="voteErr"></span>`;
     }
     const myDeck = deckOf(myPid);
     const deckBox = `<details class="box deck-box" ${myDeck ? "" : "open"}><summary><h3>Tu mazo</h3>${myDeck ? cmdLine(myPid, true) : '<span class="msg warn">Declara tu mazo y comandante antes de jugar.</span>'}</summary>${deckFormHTML("me", myDeck)}</details>`;
