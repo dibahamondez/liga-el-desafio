@@ -49,7 +49,7 @@ button{cursor:pointer}
 .brand h1 span{color:var(--red-hi)}
 .top-actions{display:flex;gap:8px;flex-wrap:wrap}
 
-.btn{border:1px solid var(--line);background:var(--surface-2);padding:8px 14px;border-radius:999px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;transition:background .15s,border-color .15s}
+.btn{border:1px solid var(--line);background:var(--surface-2);padding:8px 14px;border-radius:999px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;transition:background .15s,border-color .15s,color .15s,transform .14s cubic-bezier(.2,.8,.2,1)}
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
 .btn.primary:hover{background:#b8260e;border-color:#b8260e}
@@ -82,7 +82,7 @@ button{cursor:pointer}
 @media (prefers-reduced-motion:reduce){.digits.over{animation:none}}
 .sub{text-align:center;color:var(--muted);font-size:14px;min-height:21px}
 .bar{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin:16px 0 18px}
-.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red),var(--red-hi));transition:width .5s linear}
+.bar i{display:block;height:100%;width:100%;transform-origin:0 50%;transform:scaleX(0);will-change:transform;background:linear-gradient(90deg,var(--red),var(--red-hi));transition:transform .5s linear}
 .controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 
 /* Grid */
@@ -434,7 +434,7 @@ details[open] > .adm-sec-body,details.admin[open] > .admin-body,details[open] > 
 /* Botones y pestañas: respuesta al tocar */
 .btn,.tab,.ls-opt,.seg-b,.tg,.sw-add,.filt label,.jz-r,.mesa-foot button{transition:background-color .18s,border-color .18s,color .18s,opacity .18s,transform .12s}
 .btn:active:not(:disabled),.tab:active,.jz-r:active,.mesa-foot button:active,.sw-add:active{transform:scale(.96)}
-.tab[aria-current="page"]{transition:background-color .25s,color .25s}
+
 details > summary{transition:background-color .15s}
 /* Filas y tarjetas: aparecen suave al cambiar de mesa o ronda */
 .mesa{transition:border-color .2s,box-shadow .2s}
@@ -978,7 +978,7 @@ body.display .hdr-right{display:none}
 .cmd-search + .combo-list li.src{font-size:11px;color:var(--muted);justify-content:flex-end}
 .cmd-search + .combo-list li[data-free] b{font-weight:400;font-style:italic}
 .cmd-search + .combo-list{max-height:320px;overflow:auto}
-.tab{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:999px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.tab{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:999px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;transition:background-color .2s,color .2s,transform .14s cubic-bezier(.2,.8,.2,1)}
 .tab[aria-current="page"]{background:var(--red);color:#fff}
 .tab:hover:not([aria-current="page"]){color:var(--fg)}
 .stats{display:flex;flex-direction:column;gap:18px}
@@ -4111,7 +4111,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       }
     } catch(e){}
   }
-  function roundComplete(){ const r = S.rounds[S.cur]; return !!r && r.tables.every(t => t.result); }
+  function roundComplete(){ const r = S && S.rounds && S.rounds[S.cur]; return !!r && r.tables.every(t => t.result); }
   // Sin partir el reloj ni resultados: se puede volver a armar la ronda.
   // "Armar ronda N" aparece cuando el reloj llegó a 0 o todas las mesas tienen resultado.
   const relojSinPartir = () => !!(S && S.timer && !S.timer.running && S.timer.left === S.cfg.min * 60000);
@@ -4142,7 +4142,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     // Solo se toca la página cuando algo cambió (el reloj corre 4 veces por segundo)
     setTxt(d, fmt(ms));
     const dc = "digits" + (ms <= 0 ? " over" : ms <= 5 * 60000 ? " danger" : ms <= 10 * 60000 ? " warn" : ""); if (d.className !== dc) d.className = dc;
-    const bw = Math.min(100, Math.max(0, (1 - ms / total) * 100)).toFixed(2) + "%", bar = $("bar"); if (bar.style.width !== bw) bar.style.width = bw;
+    const bw = "scaleX(" + Math.min(1, Math.max(0, 1 - ms / total)).toFixed(4) + ")", bar = $("bar"); if (bar.style.transform !== bw) bar.style.transform = bw;
     let label, cls = "", sub = "";
     if (ms <= 0){ label = "Tiempo cumplido"; cls = "over"; sub = "Se termina el turno en curso. Quienes sigan vivos al final suman el punto por sobrevivir."; }
     else if (S.timer.running){ const w = ms <= 10 * 60000; label = w ? "Últimos minutos" : "En juego"; cls = w ? "warn" : "run"; }
@@ -4352,9 +4352,11 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       $("moveHint").hidden = false;
       $("moveHint").textContent = moveSel ? `Moviendo a ${pname(moveSel)}: toca otro jugador para intercambiarlos o el título de una mesa para llevarlo ahí. Toca de nuevo su nombre para cancelar.` : "Para mover jugadores: arrástralos a otra mesa o sobre otro jugador para intercambiarlos. En el celular, tócalo y luego toca el destino. Las mesas con resultado se reabren primero.";
     } else { const mh = $("moveHint"); if (mh) mh.hidden = true; }
+    const flipSt = flipAntes($("standBody"), "data-p");
     $("standBody").innerHTML = stand.map((x, i) =>
       `<tr data-p="${x.id}" class="${i === 0 && x.pts > 0 ? "top1" : i < 3 && x.pts > 0 ? "top3" : ""}${i < 4 && x.pts > 0 ? " t4" : ""}${x.id === focus ? " sel" : ""}${x.id === myPid ? " mine-row" : ""}"><td class="l pos">${x.pts > 0 ? medalla(i) : i + 1}</td><td class="l nm">${avatarHTML(x.id)}${nombreGanador(x.name)}${apodoHTML(x.id)}${isDrop(x.id) ? ' <span class="tag drop" title="Dejó la fecha: no juega las próximas rondas, conserva sus puntos">Drop</span>' : isLate(x.id) ? ` <span class="tag late" title="Se sumó en la ronda ${S.players.find(p => p.id === x.id).late + 1}">Tardío</span>` : ""}${(ADMUI() || M.juez) && x.warn ? `<span class="wmark" title="Warnings en esta fecha">⚠ ${x.warn}</span>` : ""}${cmdLine(x.id)}</td>
        <td class="pts">${x.pts}${(n => n ? `<span class="pen" title="Puntos negativos de la fecha${ADMUI() && x.pen ? " (incluye " + x.pen + " por warnings)" : ""}">−${n}</span>` : "")(ADMUI() ? x.neg : x.neg - x.pen)}</td><td>${x.w}</td><td>${x.k}</td><td>${x.s}</td><td>${x.pj}</td><td class="buch">${x.buch}</td><td class="mesa-c">${tableOf[x.id] != null ? tableOf[x.id] + 1 : "–"}</td></tr>`).join("");
+    flipDespues($("standBody"), "data-p", flipSt); mesasDestello();
     const closed = S.rounds.filter(r => r.tables.every(t => t.result)).length;
     $("standMeta").textContent = `${closed} de ${c.rounds} rondas cerradas`;
     $("legend").textContent = `Desempate: puntos, kills y Buch (Buchholz: suma de los puntos de los rivales enfrentados). V: victorias · K: kills · S: rondas sobrevividas sin ganar · ${PAIRINGS[c.pairing || "suizo"]}. Toca un jugador para ver su historial.${ADMUI() ? " Organizador: toca un jugador para corregir sus puntos ronda por ronda." : ""}`;
@@ -4692,6 +4694,34 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     window.addEventListener("resize", () => { if (!el.hidden) cntPintar(); });
   }
   document.addEventListener("click", e => { const b = e.target.closest("[data-contador]"); if (b) cntAbrir(+b.dataset.contador); });
+  /* ---------- Movimiento suave al actualizar: el standing se reordena deslizando (FLIP) y la mesa recién cerrada destella ---------- */
+  const quieto = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e){ return true; } };
+  function flipAntes(cont, attr){
+    const m = new Map(); if (!cont || quieto()) return m;
+    cont.querySelectorAll(`[${attr}]`).forEach(el => m.set(el.getAttribute(attr), {top: el.getBoundingClientRect().top, txt: el.textContent}));
+    return m;
+  }
+  function flipDespues(cont, attr, antes){
+    if (!cont || !antes.size || !cont.animate || quieto()) return;
+    const filas = cont.querySelectorAll(`[${attr}]`); if (filas.length > 120) return;
+    filas.forEach(el => {
+      const a = antes.get(el.getAttribute(attr)); if (!a) return;
+      const dy = a.top - el.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) el.animate([{transform: `translateY(${dy}px)`}, {transform: "none"}], {duration: 520, easing: "cubic-bezier(.22,.9,.3,1)"});
+      else if (a.txt !== el.textContent) el.animate([{backgroundColor: "rgba(233,180,76,.22)"}, {backgroundColor: "rgba(233,180,76,0)"}], {duration: 1100, easing: "ease-out"});
+    });
+  }
+  const mesaFirma = {};
+  function mesasDestello(){
+    if (!S || quieto()) return;
+    document.querySelectorAll("#tables .mesa[data-t]").forEach(el => {
+      const ti = el.dataset.t, t = S.rounds[VR()] && S.rounds[VR()].tables[ti]; if (!t) return;
+      const k = VR() + ":" + ti, f = JSON.stringify(t.result || null);
+      if (mesaFirma[k] !== undefined && mesaFirma[k] !== f && t.result && el.animate)
+        el.animate([{boxShadow: "0 0 0 2px rgba(233,180,76,.9), 0 0 32px rgba(233,180,76,.45)"}, {boxShadow: "0 0 0 2px rgba(233,180,76,0), 0 0 32px rgba(233,180,76,0)"}], {duration: 1400, easing: "ease-out"});
+      mesaFirma[k] = f;
+    });
+  }
   function renderMine(stand, tableOf, myPid){
     const box = $("mine");
     if (M.mode !== "live" || !M.uid){
@@ -5264,14 +5294,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   });
 
   $("btnStart").addEventListener("click", () => {
+    if (!S || !S.timer) return;
     const t = S.timer; beep(0);
     if (t.running){ t.left = t.endAt - Date.now(); t.running = false; } else { t.endAt = Date.now() + t.left; t.running = true; }
     commit();
   });
-  function adjust(d){ const t = S.timer; if (t.running) t.endAt += d; else t.left += d; commit(); }
+  function adjust(d){ if (!S || !S.timer) return; const t = S.timer; if (t.running) t.endAt += d; else t.left += d; commit(); }
   $("btnPlus").addEventListener("click", () => adjust(60000));
   $("btnMinus").addEventListener("click", () => adjust(-60000));
-  $("btnReset").addEventListener("click", () => { S.timer = {running:false, endAt:0, left:S.cfg.min * 60000}; Object.keys(alerts).forEach(k => delete alerts[k]); commit(); });
+  $("btnReset").addEventListener("click", () => { if (!S) return; S.timer = {running:false, endAt:0, left:S.cfg.min * 60000}; Object.keys(alerts).forEach(k => delete alerts[k]); commit(); });
   $("btnRearmar").addEventListener("click", () => {
     if (!M.admin || !S || S.phase === "inscripcion" || !sinResultados()) return;
     const azar = isRandomRound(S.cfg, S.cur), reloj = !relojSinPartir();
@@ -5283,6 +5314,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     commit();
   });
   $("btnNext").addEventListener("click", async () => {
+    if (!S || !S.rounds || !S.rounds[S.cur]) return;
     if (roundComplete() && S.cur === S.cfg.rounds - 1){ closeLiga(); return; }
     if (S.cur >= S.cfg.rounds - 1) return;
     if (!roundComplete()){
