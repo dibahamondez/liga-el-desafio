@@ -33,6 +33,7 @@
       "preload.js",
       "preload-tv.js",
       "preload-liga.js",
+      "cuenta-defecto.json",
       "ui/**",
       "bot/**",
       "web/**",

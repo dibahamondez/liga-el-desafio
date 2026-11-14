@@ -219,21 +219,34 @@ ipcMain.handle("tv:mostrar", (e, v) => proyectar(v));
 // Cuenta de organizador de este PC: la app entra sola con ella. Se guarda cifrada con el sistema (Windows: DPAPI del usuario).
 const archivoCuenta = () => path.join(app.getPath("userData"), "cuenta-organizador.bin");
 const soloPanel = e => vLiga && e.sender === vLiga.webContents;
+// Cuenta de organizador por defecto que trae el instalador (se usa si en este PC no se guardó otra)
+const sinDefecto = () => path.join(app.getPath("userData"), "sin-cuenta-defecto");
+function cuentaDefecto() {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(__dirname, "cuenta-defecto.json"), "utf8"));
+    const k = Buffer.from("ElDesafio-Liga-Commander"), d = Buffer.from(j.d, "base64");
+    const c = JSON.parse(Buffer.from(d.map((b, i) => b ^ k[i % k.length])).toString("utf8"));
+    return c && c.email && c.pass ? Object.assign(c, { defecto: true }) : null;
+  } catch (err) { return null; }
+}
 ipcMain.handle("cuenta:leer", e => {
   if (!soloPanel(e)) return null;
   try {
     const b = fs.readFileSync(archivoCuenta());
     const txt = safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(b) : Buffer.from(b.toString(), "base64").toString("utf8");
     return JSON.parse(txt);
-  } catch (err) { return null; }
+  } catch (err) {}
+  return fs.existsSync(sinDefecto()) ? null : cuentaDefecto();
 });
 ipcMain.handle("cuenta:guardar", (e, c) => {
   if (!soloPanel(e) || !c || !c.email || !c.pass) return false;
   const txt = JSON.stringify({ email: c.email, pass: c.pass });
   fs.writeFileSync(archivoCuenta(), safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(txt) : Buffer.from(Buffer.from(txt).toString("base64")));
+  try { fs.unlinkSync(sinDefecto()); } catch (err) {}
   return true;
 });
-ipcMain.handle("cuenta:borrar", e => { if (!soloPanel(e)) return false; try { fs.unlinkSync(archivoCuenta()); } catch (err) {} return true; });
+// "Cambiar cuenta": se borra la guardada y tampoco se usa la por defecto, así se puede poner otra
+ipcMain.handle("cuenta:borrar", e => { if (!soloPanel(e)) return false; try { fs.unlinkSync(archivoCuenta()); } catch (err) {} try { fs.writeFileSync(sinDefecto(), "1"); } catch (err) {} return true; });
 ipcMain.handle("tv:completa", () => { if (!tv || tv.isDestroyed()) return false; if (pantallaExtra() && !tv.isFullScreen()) llevarASegunda(); else tv.setFullScreen(!tv.isFullScreen()); return tv.isFullScreen(); });
 // Si hay que vincular WhatsApp, se muestra la pestaña del bot para que se vea el código
 function verBot() { if (vistaAct !== "bot" && win) { vistaAct = "bot"; acomodar(); if (vivo(vBarra)) vBarra.webContents.send("vista", "bot"); } }

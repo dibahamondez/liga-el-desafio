@@ -641,9 +641,10 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     if (c && c.email && c.pass){
       const {error} = await sb.auth.signInWithPassword({email:c.email, password:c.pass});
       if (!error) return true;
-      ctx.appErr = /invalid/i.test(error.message || "") ? "La contraseña guardada ya no sirve (¿se cambió?). Escríbela de nuevo." : "No se pudo entrar: " + friendly(error);
+      ctx.appErr = c.defecto ? (/invalid/i.test(error.message || "") ? "La cuenta de organizador que trae la app todavía no está creada en la liga (falta correr el SQL en Supabase) o se le cambió la contraseña. Mientras, puedes entrar con otra cuenta de organizador." : "No se pudo entrar: " + friendly(error))
+        : /invalid/i.test(error.message || "") ? "La contraseña guardada ya no sirve (¿se cambió?). Escríbela de nuevo." : "No se pudo entrar: " + friendly(error);
     }
-    ctx.email = (c && c.email) || "";
+    ctx.email = (c && !c.defecto && c.email) || "";
     setTimeout(() => show("app"), 50);
     return false;
   }
