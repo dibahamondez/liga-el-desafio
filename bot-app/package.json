@@ -32,6 +32,7 @@
       "main.js",
       "preload.js",
       "preload-tv.js",
+      "preload-liga.js",
       "ui/**",
       "bot/**",
       "web/**",

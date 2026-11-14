@@ -104,7 +104,18 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       ${nota ? `<p class="hint" style="margin-top:-4px">${nota}</p>` : ""}
       <span class="err" id="aGErr"></span>
       <div class="or">o con tu correo</div>`;
+  // App de escritorio del organizador: el PC del evento entra solo con la cuenta de organizador guardada en el equipo
+  const APP = window.desafioApp || null;
   const VIEWS = {
+    app: () => ({eyebrow:"App del organizador", title:"Cuenta de organizador de este PC", body:`
+      <p class="hint">Se configura <b>una sola vez</b>. Después la app entra sola, siempre como organizador, sin pedir usuario. La contraseña queda guardada cifrada en este PC.</p>
+      <form id="fApp" novalidate>
+        <div class="field"><label for="aEmail">Correo de la cuenta de organizador</label><input id="aEmail" type="email" autocomplete="username" inputmode="email" value="${esc(ctx.email)}" required></div>
+        ${passField("aPass", "Contraseña", "current-password")}
+        <span class="err" id="aErr">${esc(ctx.appErr || "")}</span>
+        <button class="btn primary" type="submit">Guardar y entrar</button>
+      </form>
+      <p class="hint">Usa una cuenta con correo y contraseña que ya sea organizadora en la liga (no una de Google). Si no tiene contraseña, créala en la página con “Olvidé mi contraseña”.</p>`, noClose:true}),
     login: () => ({eyebrow:"Liga Commander El Desafío", title:"Entrar", body:`
       ${googleBox("Entrar con Google")}
       <form id="fLogin" novalidate>
@@ -273,6 +284,19 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     e.preventDefault();
     const f = e.target; setErr("");
     if (!sb) return setErr("No se pudo conectar con el servidor.");
+    if (f.id === "fApp"){
+      const email = clean($a("aEmail").value).toLowerCase(), pass = $a("aPass").value;
+      ctx.email = email;
+      if (!EMAIL_RE.test(email)) return setErr("Escribe un correo válido.");
+      if (!pass) return setErr("Escribe la contraseña.");
+      busy(f, true);
+      const {error} = await sb.auth.signInWithPassword({email, password:pass});
+      if (error){ busy(f, false); return setErr(error.code === "invalid_credentials" || /invalid login/i.test(error.message || "") ? "Correo o contraseña incorrectos." : friendly(error)); }
+      const a = await sb.rpc("es_admin");
+      if (!(a && a.data)){ await sb.auth.signOut(); busy(f, false); return setErr("Esa cuenta no es organizadora de la liga. Usa una cuenta de organizador."); }
+      try { await APP.cuentaGuardar({email, pass}); } catch(err){}
+      location.reload(); return;
+    }
     if (f.id === "fLogin"){
       const email = clean($a("aEmail").value).toLowerCase(), pass = $a("aPass").value;
       ctx.email = email;
@@ -465,6 +489,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       // Si quedó un código pendiente (se recargó la página), vuelve a esa pantalla
       const p = store.get("desafio-pend");
       if ((!v || v === "login") && p && Date.now() - p.at < R.codigoMin * 60000){ ctx = {email:p.email, mode:p.mode, sentAt:p.at, fails:0}; return show("code"); }
+      if (APP && (!v || v === "login" || v === "signup")) v = "app";   // en la app solo existe la cuenta de organizador del PC
       show(v || "login");
     },
     close,
@@ -609,9 +634,23 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   };
 
   /* ---------- Sesión y perfil ---------- */
+  async function appEntrar(){
+    const {data:{session}} = await sb.auth.getSession();
+    if (session) return true;
+    let c = null; try { c = await APP.cuentaLeer(); } catch(e){}
+    if (c && c.email && c.pass){
+      const {error} = await sb.auth.signInWithPassword({email:c.email, password:c.pass});
+      if (!error) return true;
+      ctx.appErr = /invalid/i.test(error.message || "") ? "La contraseña guardada ya no sirve (¿se cambió?). Escríbela de nuevo." : "No se pudo entrar: " + friendly(error);
+    }
+    ctx.email = (c && c.email) || "";
+    setTimeout(() => show("app"), 50);
+    return false;
+  }
   async function connect(liga){
     if (!sb) return null;
     if (liga) LIGA_ID = liga;
+    if (APP) { try { await appEntrar(); } catch(e){} }
     const {data:{session}} = await sb.auth.getSession();
     const u = session && session.user;
     let admin = false, dev = false, juez = false, perfil = null;
@@ -627,7 +666,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       try { const j = await sb.rpc("es_juez"); juez = !!(j && j.data && !j.error); } catch(e){}
       perfil = p && p.data || null;
       // Cuenta nueva con Google sin perfil todavía: se pide nombre y apellido una sola vez
-      if (!perfil){
+      if (!perfil && !APP){
         const md = u.user_metadata || {}, full = String(md.full_name || md.name || "").trim();
         ctx.first = md.given_name || full.split(/\s+/)[0] || "";
         ctx.last = md.family_name || full.split(/\s+/).slice(1).join(" ") || "";

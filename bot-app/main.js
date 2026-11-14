@@ -2,7 +2,7 @@
 // Junta en una sola ventana: el panel del organizador (la misma página de la liga, servida desde el PC),
 // el bot de WhatsApp (solo manda lo que el organizador envía) y la pantalla para la TV del evento.
 // El bot (el mismo bot.js de la consola) corre aparte, dentro de la app; si se cae, la app lo vuelve a abrir sola.
-const { app, BrowserWindow, BaseWindow, WebContentsView, ipcMain, dialog, shell, powerSaveBlocker, screen } = require("electron");
+const { app, BrowserWindow, BaseWindow, WebContentsView, ipcMain, dialog, shell, powerSaveBlocker, screen, safeStorage } = require("electron");
 const path = require("path"), fs = require("fs"), os = require("os"), http = require("http"), { fork } = require("child_process");
 const QR = require("qrcode");
 
@@ -154,7 +154,7 @@ function linksAfuera(wc) {
 function crearVentana() {
   win = new BaseWindow({ width: 1360, height: 880, minWidth: 1000, minHeight: 640, backgroundColor: "#0e0908", title: "El Desafío · Organizador", icon: path.join(__dirname, "ui", "logo.png"), autoHideMenuBar: true });
   vBarra = new WebContentsView({ webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true } });
-  vLiga = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false } });
+  vLiga = new WebContentsView({ webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, "preload-liga.js") } });
   vBot = new WebContentsView({ webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false } });
   [vBarra, vLiga, vBot].forEach(v => { v.setBackgroundColor("#0e0908"); win.contentView.addChildView(v); });
   vBarra.webContents.loadFile(path.join(__dirname, "ui", "barra.html"));
@@ -216,6 +216,24 @@ async function proyectar(v) {
 }
 ipcMain.on("tv:vista", (e, v) => { if (tv && !tv.isDestroyed() && e.sender === tv.webContents) { tvVista = v; avisarPantalla(); } });
 ipcMain.handle("tv:mostrar", (e, v) => proyectar(v));
+// Cuenta de organizador de este PC: la app entra sola con ella. Se guarda cifrada con el sistema (Windows: DPAPI del usuario).
+const archivoCuenta = () => path.join(app.getPath("userData"), "cuenta-organizador.bin");
+const soloPanel = e => vLiga && e.sender === vLiga.webContents;
+ipcMain.handle("cuenta:leer", e => {
+  if (!soloPanel(e)) return null;
+  try {
+    const b = fs.readFileSync(archivoCuenta());
+    const txt = safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(b) : Buffer.from(b.toString(), "base64").toString("utf8");
+    return JSON.parse(txt);
+  } catch (err) { return null; }
+});
+ipcMain.handle("cuenta:guardar", (e, c) => {
+  if (!soloPanel(e) || !c || !c.email || !c.pass) return false;
+  const txt = JSON.stringify({ email: c.email, pass: c.pass });
+  fs.writeFileSync(archivoCuenta(), safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(txt) : Buffer.from(Buffer.from(txt).toString("base64")));
+  return true;
+});
+ipcMain.handle("cuenta:borrar", e => { if (!soloPanel(e)) return false; try { fs.unlinkSync(archivoCuenta()); } catch (err) {} return true; });
 ipcMain.handle("tv:completa", () => { if (!tv || tv.isDestroyed()) return false; if (pantallaExtra() && !tv.isFullScreen()) llevarASegunda(); else tv.setFullScreen(!tv.isFullScreen()); return tv.isFullScreen(); });
 // Si hay que vincular WhatsApp, se muestra la pestaña del bot para que se vea el código
 function verBot() { if (vistaAct !== "bot" && win) { vistaAct = "bot"; acomodar(); if (vivo(vBarra)) vBarra.webContents.send("vista", "bot"); } }

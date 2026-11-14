@@ -1378,6 +1378,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   // Ventana de proyección de la app de escritorio (modo 2 pantallas): muestra lo que elige el organizador desde la otra pantalla
   const TV_APP = !PORTAL && !!new URLSearchParams(location.search).get("pantalla");
   let tvSpinVisto;
+  // App de escritorio del organizador: siempre entra como organizador (sin usuario) y no muestra lo de jugador
+  const APP_ORG = !PORTAL && !!window.desafioApp;
   let canalTV = null;   // enlace directo entre el panel de control y la proyección (mismo PC): llega al instante y funciona sin internet   // último giro de ruleta visto por la proyección (para saltar sola a la ruleta cuando alguien gira)
   let sanc = {};   // sanciones del juez (tabla "sanciones")
   let pub = {};    // perfil público de cada cuenta: {apodo, avatar, nombre} (tabla "perfil_publico")
@@ -4742,6 +4744,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   }
   function renderMine(stand, tableOf, myPid){
     const box = $("mine");
+    if (APP_ORG || TV_APP){ box.hidden = true; return; }   // en la app del organizador no hay "Tu partida" ni "¿juegas?"
     if (M.mode !== "live" || !M.uid){
       if (PORTAL){ box.hidden = false; box.innerHTML = `<div class="mine-head"><div class="who"><span class="eyebrow">Tu partida</span><h2>Entra para ver tu mesa</h2></div></div><p class="msg">Con tu cuenta ves tu mesa, tus rivales, reportas el resultado y sigues tus estadísticas.</p><div class="row"><button class="btn primary" type="button" data-auth="signup">Crear cuenta</button><button class="btn" type="button" data-auth="login">Ya tengo cuenta</button></div>`; return; }
       box.hidden = true; return;
@@ -5694,7 +5697,17 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     M.uid = c.session ? c.session.user.id : null;
     M.email = c.session ? (c.session.user.email || "").toLowerCase() : null;
     const acc = $("btnAccount"); acc.hidden = false;
-    if (M.uid){
+    if (APP_ORG){
+      // Cuenta fija del PC: muestra cuál es y permite cambiarla (por si cambia la contraseña u otro organizador)
+      acc.textContent = M.uid ? "Organizador · " + (M.email || "") : "Configurar cuenta";
+      acc.title = "Cuenta de organizador guardada en este PC. Toca para cambiarla.";
+      acc.onclick = async () => {
+        if (!M.uid) return window.Auth.open("app");
+        if (!confirm("¿Cambiar la cuenta de organizador de este PC?\n\nSe borra la cuenta guardada y te pedirá el correo y la contraseña de la nueva.")) return;
+        try { await window.desafioApp.cuentaBorrar(); } catch(e){}
+        window.Auth.logout();
+      };
+    } else if (M.uid){
       const nm = M.perfil ? (M.perfil.apodo || M.perfil.nombre) : (M.email || "").split("@")[0];
       // "Mi perfil": nombre, apodo, foto, correo, contraseña y cerrar sesión
       acc.textContent = "Mi perfil · " + nm; acc.title = "Editar tu perfil o cerrar sesión (" + (M.email || "") + ")";
