@@ -9,6 +9,11 @@ const QR = require("qrcode");
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 
 const BOT_DIR = path.join(__dirname, "bot");
+// El nombre de la app lleva tilde ("El Desafío") y Electron lo pone en el User-Agent sin codificar bien:
+// Supabase lo rechaza ("invalid byte sequence for encoding UTF8") y falla el inicio de sesión y la lectura de la liga.
+// Se deja el User-Agent solo con caracteres ASCII.
+const uaLimpio = ua => String(ua || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "");
+app.userAgentFallback = uaLimpio(app.userAgentFallback);
 const AJUSTES = () => path.join(app.getPath("userData"), "ajustes.json");
 const leerAjustes = () => { try { return JSON.parse(fs.readFileSync(AJUSTES(), "utf8")); } catch (e) { return {}; } };
 const guardarAjustes = a => { fs.mkdirSync(path.dirname(AJUSTES()), { recursive: true }); fs.writeFileSync(AJUSTES(), JSON.stringify(a, null, 2)); };
@@ -282,6 +287,7 @@ ipcMain.handle("desvincular", async () => {
 app.on("second-instance", () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
 // La ventana principal es una BaseWindow: los diálogos se anclan a ella
 app.whenReady().then(async () => {
+  try { const { session } = require("electron"); session.defaultSession.setUserAgent(uaLimpio(session.defaultSession.getUserAgent())); } catch (e) {}
   powerSaveBlocker.start("prevent-display-sleep");
   // si se conecta el proyector con la proyección ya abierta, se va sola a esa pantalla
   screen.on("display-added", () => { setTimeout(() => { if (tv && !tv.isDestroyed()) llevarASegunda(); avisarPantalla(); }, 800); });
