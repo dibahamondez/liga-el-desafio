@@ -20,6 +20,11 @@ img{width:32px;height:32px}
 .dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
 .dot.warn{background:var(--warn)}
 .dot.err{background:var(--err)}
+.tab.pide{color:#fff;border-color:var(--warn);animation:pide 1.4s ease-in-out infinite}
+.tab.pide .aviso{display:inline}
+.tab .aviso{display:none;font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.06em}
+@keyframes pide{50%{box-shadow:0 0 0 3px rgba(240,166,58,.25)}}
+@media (prefers-reduced-motion:reduce){.tab.pide{animation:none}}
 .sp{flex:1}
 .btn{height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line);background:var(--s2);color:var(--fg);font:600 13px "Segoe UI",system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px}
 .btn:hover{border-color:#5a443d}
@@ -49,7 +54,7 @@ body.proy-on .marca{display:none}
   <img src="logo.png" alt="">
   <div class="marca"><small>Liga El Desafío</small><b>Organizador</b></div>
   <button class="tab on" type="button" data-v="liga">🏆 Liga</button>
-  <button class="tab" type="button" data-v="bot"><span class="dot" id="dot"></span>Bot de WhatsApp</button>
+  <button class="tab" type="button" data-v="bot"><span class="dot" id="dot"></span>Bot de WhatsApp <span class="aviso">· vincular</span></button>
   <span class="sp"></span>
   <div class="proy" id="proy" hidden>
     <span class="lbl"><i></i>En el proyector</span>
@@ -93,7 +98,10 @@ bot.on("vista", v => document.querySelectorAll("[data-v]").forEach(x => x.classL
 bot.on("pantalla", pintarPantalla);
 const color = s => s === "listo" ? "ok" : ["desconectado", "fallo", "error"].includes(s) ? "err" : "warn";
 const titulo = s => ({listo: "Bot conectado", vincular: "Falta vincular WhatsApp", desconectado: "Bot desconectado", fallo: "No se pudo iniciar sesión", error: "Error en el bot", reiniciando: "Bot reiniciándose"}[s] || "Conectando el bot…");
-bot.on("estado", d => { $("dot").className = "dot " + color(d.s); $("dot").title = titulo(d.s); });
+const tabBot = document.querySelector('[data-v="bot"]');
+bot.on("estado", d => { $("dot").className = "dot " + color(d.s); $("dot").title = titulo(d.s); if (d.s !== "vincular") tabBot.classList.remove("pide"); });
+bot.on("avisoBot", () => { if (!tabBot.classList.contains("on")) tabBot.classList.add("pide"); tabBot.title = "WhatsApp pide vincular el número del bot: entra aquí para ver el código"; });
+tabBot.addEventListener("click", () => tabBot.classList.remove("pide"));
 bot.inicio().then(i => { if (i && i.estado){ $("dot").className = "dot " + color(i.estado); $("dot").title = titulo(i.estado); } });
 </script>
 </body>

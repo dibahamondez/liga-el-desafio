@@ -98,7 +98,8 @@ function iniciarBot() {
     if (!m) return;
     if (m.ev === "resp") { const p = pend.get(m.id); if (p) { pend.delete(m.id); clearTimeout(p.t); p.ok(m.data); } return; }
     if (m.ev === "log") return registro(m.t, m.err);
-    if (m.ev === "code" || m.ev === "qr") verBot();
+    // ya no salta solo a la pestaña del bot: la barra avisa (pestaña parpadeando) y el organizador entra cuando quiera
+    if ((m.ev === "code" || m.ev === "qr") && vivo(vBarra)) vBarra.webContents.send("avisoBot", true);
     if (m.ev === "code") { ultimo.estado = "vincular"; ultimo.code = m.code; return aVentana("estado", { s: "vincular", code: m.code }); }
     if (m.ev === "qr") { ultimo.estado = "vincular"; try { ultimo.qr = await QR.toDataURL(m.qr, { margin: 1, width: 300 }); } catch (e) {} return aVentana("estado", { s: "vincular", qr: ultimo.qr, code: ultimo.code }); }
     if (m.ev === "estado") { ultimo.estado = m.s; return aVentana("estado", { s: m.s, t: m.t }); }
