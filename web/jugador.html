@@ -3841,12 +3841,12 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     S.rounds.forEach((r, ri) => r.tables.forEach((t, ti) => { if (t.seats.includes(pid)) h.push({ri, ti, t}); }));
     const rivals = [...new Set(h.flatMap(x => x.t.seats.filter(s => s !== pid)))];
     return `<p class="deck-line">${cmdLine(pid, true)}</p><div class="kpis">
-        <div class="kpi"><b>${pos + 1}°</b><span>Posición</span></div>
+        ${PORTAL ? "" : `<div class="kpi"><b>${pos + 1}°</b><span>Posición</span></div>`}
         <div class="kpi"><b>${me.pts}</b><span>Puntos</span></div>
         <div class="kpi"><b>${me.w}</b><span>Victorias</span></div>
         <div class="kpi"><b>${me.k}</b><span>Kills</span></div>
         <div class="kpi"><b class="${me.neg ? "neg" : ""}">${me.neg ? "−" + me.neg : 0}</b><span>Puntos negativos</span></div>
-        <div class="kpi"><b>${me.buch}</b><span>Buchholz</span></div>
+        ${PORTAL ? "" : `<div class="kpi"><b>${me.buch}</b><span>Buchholz</span></div>`}
       </div>
       ${(() => { const yo = M.uid ? links[M.uid] : null; return me.warn && (pid === yo || ADMUI() || M.juez) ? `<div class="fair" role="note"><b>${pid === yo ? "Tienes" : "Tiene"} ${me.warn} warning${me.warn === 1 ? "" : "s"} en esta fecha</b><p>${pid === yo ? `Recuerda que esto es un juego entre amigos: juega limpio, respeta a tu mesa y piensa bien tus decisiones antes de actuar. Cada ${WARN_LIMIT} warnings en la fecha se resta ${WARN_PEN} punto. 😞` : `Solo lo ven el organizador, el juez y el propio jugador.`}</p></div>` : ""; })()}
       
@@ -4175,10 +4175,12 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
   function tick(){
     if (!S) return;
     try { botonesRonda(); } catch(e){}
-    const ms = remaining(), total = S.cfg.min * 60000, d = $("digits"), st = $("status");
+    // con la fecha terminada el reloj queda en 00:00 (no sigue contando tiempo extra)
+    const fin = roundComplete() && S.cur === S.cfg.rounds - 1 && !inscOpen();
+    const ms = fin ? 0 : remaining(), total = S.cfg.min * 60000, d = $("digits"), st = $("status");
     // Solo se toca la página cuando algo cambió (el reloj corre 4 veces por segundo)
     setTxt(d, fmt(ms));
-    const dc = "digits" + (ms <= 0 ? " over" : ms <= 5 * 60000 ? " danger" : ms <= 10 * 60000 ? " warn" : ""); if (d.className !== dc) d.className = dc;
+    const dc = "digits" + (fin ? "" : ms <= 0 ? " over" : ms <= 5 * 60000 ? " danger" : ms <= 10 * 60000 ? " warn" : ""); if (d.className !== dc) d.className = dc;
     const bw = "scaleX(" + Math.min(1, Math.max(0, 1 - ms / total)).toFixed(4) + ")", bar = $("bar"); if (bar.style.transform !== bw) bar.style.transform = bw;
     let label, cls = "", sub = "";
     if (ms <= 0){ label = "Tiempo cumplido"; cls = "over"; sub = "Se termina el turno en curso. Quienes sigan vivos al final suman el punto por sobrevivir."; }
@@ -4189,10 +4191,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       const n = registrants().length, msgs = ["Inscripciones abiertas", porComenzar(), n + (n === 1 ? " inscrito" : " inscritos")];
       label = msgs[Math.floor(Date.now() / 3000) % msgs.length]; cls = "insc"; sub = "";
     }
-    else if (roundComplete() && S.cur === S.cfg.rounds - 1){ const cz = isClosed(); label = cz ? "Liga cerrada" : "Liga finalizada"; cls = "run"; sub = cz ? "Gracias por jugar. Resultados finales en el standing." : "Resultados finales en el standing."; }
+    else if (roundComplete() && S.cur === S.cfg.rounds - 1){ const cz = isClosed(); label = cz ? "Liga cerrada" : "Liga finalizada"; cls = "run"; sub = !ADMUI() && suspenso() && (S.revelados || 0) < 4 ? "Gracias por jugar. Los ganadores se anuncian en la premiación." : PORTAL ? "Gracias por jugar." : cz ? "Gracias por jugar. Resultados finales en el standing." : "Resultados finales en el standing."; }
     if (st.textContent !== label){ st.textContent = label; st.classList.remove("flip"); void st.offsetWidth; st.classList.add("flip"); }
     const sc = "status " + cls + (st.classList.contains("flip") ? " flip" : ""); if (st.className !== sc) st.className = sc; setTxt($("sub"), sub);
-    if (S.timer.running && M.admin){
+    if (S.timer.running && M.admin && !fin){
       const k = "r" + S.cur;
       if (ms <= 10 * 60000 && !alerts[k + "10"]){ alerts[k + "10"] = 1; if (ms > 9 * 60000) beep(1); }
       if (ms <= 5 * 60000 && !alerts[k + "5"]){ alerts[k + "5"] = 1; if (ms > 4 * 60000) beep(2); }
