@@ -2,16 +2,23 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0909">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="El Desafío">
 <meta property="og:image" content="logo.png">
 <title>Liga Commander El Desafío</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Oswald:wght@400;500;600&family=Open+Sans:wght@400;600&display=swap">
 <style>[hidden]{display:none!important}
+/* iPhone con la liga abierta desde el ícono de inicio: el contenido no queda bajo la hora/batería ni el notch */
+html{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
 
 /* Layout: cronómetro de ronda como pieza central a todo el ancho; debajo, mesas (izq.) y standing (der.); panel del organizador plegable al final. Estética de la tienda: negro, rojo vino, Lato 900 + Oswald. */
 :root{
@@ -131,6 +138,15 @@ button{cursor:pointer}
 /* Standing */
 .stand{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .stand-scroll{overflow-x:auto}
+/* Premiación: top 4 oculto hasta que el organizador lo revela */
+tr.oculto td{color:var(--muted)}
+tr.oculto .incognita{font-family:var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.85;animation:incognita 2.4s ease-in-out infinite}
+@keyframes incognita{50%{opacity:.45}}
+tr.revelado td{background:linear-gradient(90deg,rgba(233,180,76,.18),transparent 70%)}
+.premiacion{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:10px 12px;border:1px dashed var(--gold);border-radius:12px;font-size:13px}
+.premiacion[hidden]{display:none}
+.premiacion>span{flex:1 1 220px;min-width:0}
+@media (prefers-reduced-motion:reduce){tr.oculto .incognita{animation:none}}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;text-align:right;white-space:nowrap}
 th{font-family:var(--f-num);font-weight:400;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);background:var(--surface-2)}
@@ -448,9 +464,19 @@ body.display #mainGrid,body.display .clock{animation:none}
 /* ---------- Mesa en juego (contador de vidas) ---------- */
 body.cnt-on{overflow:hidden}
 #cnt{position:fixed;inset:0;z-index:300;background:#000;touch-action:manipulation;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
-.cnt-grid{position:absolute;inset:0;display:grid;gap:8px;padding:6px}
+.cnt-grid{position:absolute;inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);display:grid;gap:8px;padding:6px}
 .cnt-pnl{position:relative;overflow:hidden;border-radius:22px;background:#1c1412;min-width:0;min-height:0}
-.cnt-bg{position:absolute;inset:0;display:flex}
+.cnt-cmdnm{display:block;margin-top:2px;font:600 11px var(--f-body,system-ui);letter-spacing:.02em;text-transform:none;opacity:.8}
+.cnt-asiento{position:absolute;inset:0;width:100%;border:0;background:rgba(0,0,0,.25);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;cursor:pointer;transition:background-color .2s,box-shadow .2s}
+.cnt-asiento b{font:800 clamp(22px,6vmin,40px)/1.05 var(--f-display,system-ui);text-transform:uppercase;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,.8)}
+.cnt-asiento span{font:600 13px system-ui;opacity:.85;text-align:center}
+.cnt-asiento small{font:600 12px system-ui;color:var(--gold,#e9b44c);text-align:center}
+#cnt.asientos .cnt-nm{display:none}
+.cnt-asiento.sel{background:rgba(233,180,76,.28);box-shadow:inset 0 0 0 4px var(--gold,#e9b44c)}
+.cnt-setup{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;width:min(300px,80vw);background:rgba(11,8,7,.94);border:2px solid var(--gold,#e9b44c);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;text-align:center;color:#fff;box-shadow:0 0 0 6px #000}
+.cnt-setup b{font:800 18px var(--f-display,system-ui);text-transform:uppercase}
+.cnt-setup span{font-size:13px;color:#cdbdb5}
+.cnt-bg{position:absolute;inset:0;display:flex;z-index:-1}
 .cnt-bg i{flex:1;background-size:cover;background-position:center;filter:saturate(1.05)}
 .cnt-bg.vacio{background:radial-gradient(circle at 30% 20%,#4a2018,#1a0f0d 70%)}
 .cnt-bg{transition:none}
@@ -1186,6 +1212,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         </div>
         <div class="legend" id="legend"></div>
       </div>
+      <div class="premiacion" id="premiacion" hidden></div>
       <div class="box ficha" id="ficha" hidden></div>
     </section>
   </div>
@@ -4373,10 +4400,16 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       $("moveHint").textContent = moveSel ? `Moviendo a ${pname(moveSel)}: toca otro jugador para intercambiarlos o el título de una mesa para llevarlo ahí. Toca de nuevo su nombre para cancelar.` : "Para mover jugadores: arrástralos a otra mesa o sobre otro jugador para intercambiarlos. En el celular, tócalo y luego toca el destino. Las mesas con resultado se reabren primero.";
     } else { const mh = $("moveHint"); if (mh) mh.hidden = true; }
     const flipSt = flipAntes($("standBody"), "data-p");
-    $("standBody").innerHTML = stand.map((x, i) =>
-      `<tr data-p="${x.id}" class="${i === 0 && x.pts > 0 ? "top1" : i < 3 && x.pts > 0 ? "top3" : ""}${i < 4 && x.pts > 0 ? " t4" : ""}${x.id === focus ? " sel" : ""}${x.id === myPid ? " mine-row" : ""}"><td class="l pos">${x.pts > 0 ? medalla(i) : i + 1}</td><td class="l nm">${avatarHTML(x.id)}${nombreGanador(x.name)}${apodoHTML(x.id)}${isDrop(x.id) ? ' <span class="tag drop" title="Dejó la fecha: no juega las próximas rondas, conserva sus puntos">Drop</span>' : isLate(x.id) ? ` <span class="tag late" title="Se sumó en la ronda ${S.players.find(p => p.id === x.id).late + 1}">Tardío</span>` : ""}${(ADMUI() || M.juez) && x.warn ? `<span class="wmark" title="Warnings en esta fecha">⚠ ${x.warn}</span>` : ""}${cmdLine(x.id)}</td>
+    // Premiación: en la última ronda el top 4 queda oculto en la pantalla pública y el organizador lo revela del 4.º al 1.º
+    const sus = suspenso(), publico = !ADMUI() || document.body.classList.contains("display");
+    const ocultas = sus ? Math.max(0, Math.min(4, stand.length) - (S.revelados || 0)) : 0;
+    $("standBody").innerHTML = stand.map((x, i) => (publico && i < ocultas)
+      ? `<tr data-p="oculto${i}" class="oculto"><td class="l pos">${medalla(i)}</td><td class="l nm"><span class="incognita">¿Quién será?</span></td><td class="pts">?</td><td colspan="6" class="l"></td></tr>`
+      : `<tr data-p="${x.id}" class="${i === 0 && x.pts > 0 ? "top1" : i < 3 && x.pts > 0 ? "top3" : ""}${i < 4 && x.pts > 0 ? " t4" : ""}${x.id === focus ? " sel" : ""}${x.id === myPid ? " mine-row" : ""}"><td class="l pos">${x.pts > 0 ? medalla(i) : i + 1}</td><td class="l nm">${avatarHTML(x.id)}${nombreGanador(x.name)}${apodoHTML(x.id)}${isDrop(x.id) ? ' <span class="tag drop" title="Dejó la fecha: no juega las próximas rondas, conserva sus puntos">Drop</span>' : isLate(x.id) ? ` <span class="tag late" title="Se sumó en la ronda ${S.players.find(p => p.id === x.id).late + 1}">Tardío</span>` : ""}${(ADMUI() || M.juez) && x.warn ? `<span class="wmark" title="Warnings en esta fecha">⚠ ${x.warn}</span>` : ""}${cmdLine(x.id)}</td>
        <td class="pts">${x.pts}${(n => n ? `<span class="pen" title="Puntos negativos de la fecha${ADMUI() && x.pen ? " (incluye " + x.pen + " por warnings)" : ""}">−${n}</span>` : "")(ADMUI() ? x.neg : x.neg - x.pen)}</td><td>${x.w}</td><td>${x.k}</td><td>${x.s}</td><td>${x.pj}</td><td class="buch">${x.buch}</td><td class="mesa-c">${tableOf[x.id] != null ? tableOf[x.id] + 1 : "–"}</td></tr>`).join("");
     flipDespues($("standBody"), "data-p", flipSt); mesasDestello();
+    revelarAnim(stand, ocultas, publico);
+    pintarPremiacion(stand, sus, ocultas);
     const closed = S.rounds.filter(r => r.tables.every(t => t.result)).length;
     $("standMeta").textContent = `${closed} de ${c.rounds} rondas cerradas`;
     $("legend").textContent = `Desempate: puntos, kills y Buch (Buchholz: suma de los puntos de los rivales enfrentados). V: victorias · K: kills · S: rondas sobrevividas sin ganar · ${PAIRINGS[c.pairing || "suizo"]}. Toca un jugador para ver su historial.${ADMUI() ? " Organizador: toca un jugador para corregir sus puntos ronda por ronda." : ""}`;
@@ -4442,8 +4475,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const t = S && S.rounds[S.cur] && S.rounds[S.cur].tables[ti]; if (!t) return;
     cntTi = ti; cntKey = `__mesa:${LIGA}:${S.fecha || ""}:${S.cur}:${ti}`;
     let g = null; try { g = JSON.parse(localStorage.getItem(cntKey) || "null"); } catch(e){}
-    if (!g || JSON.stringify(g.seats) !== JSON.stringify(t.seats)){
-      g = {seats: t.seats.slice(), life: {}, cmd: {}, cnt: {}, out: {}, orden: 0, inicio: Date.now()};
+    if (!g || JSON.stringify(g.seats.slice().sort()) !== JSON.stringify(t.seats.slice().sort())){
+      g = {seats: t.seats.slice(), life: {}, cmd: {}, cnt: {}, out: {}, orden: 0, inicio: Date.now(), ordenListo: false};
       t.seats.forEach(p => { g.life[p] = CNT_VIDA; g.cnt[p] = {veneno: 0, exp: 0, energia: 0, impuesto: 0}; g.cmd[p] = {}; });
     }
     CNT = g; cntVista = null; cntModal = null; cntGuardar();
@@ -4451,19 +4484,31 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (!el){ el = document.createElement("div"); el.id = "cnt"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Contador de la mesa"); document.body.appendChild(el); cntEventos(el); }
     el.hidden = false; document.body.classList.add("cnt-on"); cntPrev = {}; cntPrevModal = null; cntPrevFin = false; cntEntrando = true;
     // Pantalla completa, vertical y sin que se apague (si el celular lo permite)
-    try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen({navigationUI: "hide"}); if (r && r.then) r.then(() => { try { screen.orientation.lock("portrait").catch(() => {}); } catch(e){} }).catch(() => {}); } catch(e){}
+    alternarPantallaCompleta(true);
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(l => cntLock = l).catch(() => {}); } catch(e){}
     cntPintar(); cntEntrando = false; clearInterval(cntTimer); cntTimer = setInterval(cntReloj, 1000);
     cntAnim(el, [{opacity: 0}, {opacity: 1}], {duration: 260});
     el.querySelectorAll(".cnt-pnl").forEach((p, i) => cntAnim(p, [{opacity: 0, transform: "scale(.9)"}, {opacity: 1, transform: "none"}], {duration: 420, delay: 60 + i * 55}));
     cntAnim(el.querySelector(".cnt-hub"), [{opacity: 0, transform: "translate(-50%,-50%) scale(.6) rotate(-45deg)"}, {opacity: 1, transform: "translate(-50%,-50%)"}], {duration: 520, delay: 220, easing: REBOTE});
   }
+  // Pantalla completa sin la barra del navegador (Android/PC). En iPhone no existe: se usa "Agregar a inicio".
+  const pantallaCompletaOk = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  const enPantallaCompleta = () => !!(document.fullscreenElement || document.webkitFullscreenElement) || (window.matchMedia && matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches);
+  async function alternarPantallaCompleta(soloEntrar){
+    const d = document.documentElement;
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement){ if (soloEntrar) return; await (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen()); return; }
+      if (d.requestFullscreen) await d.requestFullscreen({navigationUI: "hide"}); else if (d.webkitRequestFullscreen) d.webkitRequestFullscreen();
+      try { screen.orientation.lock("portrait").catch(() => {}); } catch(e){}
+    } catch(e){}
+  }
+  document.addEventListener("fullscreenchange", () => { const el = $("cnt"); if (el && !el.hidden && CNT) cntPintar(); });
   function cntCerrar(){
     const el = $("cnt"), fin = () => { if (el) el.hidden = true; document.body.classList.remove("cnt-on"); };
     const a = el && cntAnim(el, [{opacity: 1, transform: "none"}, {opacity: 0, transform: "scale(1.03)"}], {duration: 220, fill: "forwards"});
     if (a) a.onfinish = () => { fin(); a.cancel(); }; else fin();
     clearInterval(cntTimer);
-    try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch(e){}
+    try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (document.webkitFullscreenElement) document.webkitExitFullscreen(); } catch(e){}
     try { if (cntLock) cntLock.release(); } catch(e){} cntLock = null;
     render();
   }
@@ -4496,7 +4541,10 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const chips = cntChips(pid);
     let cuerpo;
     const enCmd = cntVista && cntVista !== pid ? cntVista : null;
-    if (cntVista === pid){
+    if (CNT.ordenListo === false){
+      cuerpo = `<button type="button" class="cnt-asiento${CNT.selAsiento === pid ? " sel" : ""}" data-cnt="asiento" data-p="${pid}" aria-label="Mover a ${esc(pname(pid))} de asiento">
+        <b>${esc(pname(pid))}</b>${cmds.length ? `<small>${cmds.map(n => esc(n.split(",")[0])).join(" · ")}</small>` : ""}<span>${CNT.selAsiento === pid ? "Ahora toca el lugar donde se sienta" : CNT.selAsiento ? "Toca para cambiar de lugar con " + esc(cntCorto(CNT.selAsiento)) : "Toca para cambiarlo de lugar"}</span></button>`;
+    } else if (cntVista === pid){
       cuerpo = `<div class="cnt-cmdyo"><b>Daño de comandante</b><span>que has recibido</span><button type="button" class="cnt-volver" data-cnt="volver">Volver al juego</button></div>`;
     } else if (enCmd){
       // daño que este jugador (atacante) le hizo a quien abrió la vista de comandante
@@ -4518,8 +4566,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         <button type="button" class="cnt-ic cmdb" data-cnt="vercmd" data-p="${pid}" aria-label="Daño de comandante recibido" title="Daño de comandante">⚔</button>
         <button type="button" class="cnt-ic cntb" data-cnt="contadores" data-p="${pid}" aria-label="Veneno, experiencia y más" title="Veneno, experiencia, energía">☠</button>`;
     }
-    return `<div class="cnt-pnl${vivo ? "" : " fuera"}${enCmd ? " atk" : ""}${cntVista === pid ? " victima" : ""}" data-pnl="${pid}" data-modo="${cntModo(pid)}" style="${grid}" data-rot="${rot}">${fondo}
-      <div class="cnt-in" style="--rot:${rot}deg"><span class="cnt-nm">${esc(cntCorto(pid))}</span>${cuerpo}<span class="cnt-chips">${chips}</span></div></div>`;
+    return `<div class="cnt-pnl${vivo ? "" : " fuera"}${enCmd ? " atk" : ""}${cntVista === pid ? " victima" : ""}" data-pnl="${pid}" data-modo="${cntModo(pid)}" style="${grid}" data-rot="${rot}">
+      <div class="cnt-in" style="--rot:${rot}deg">${fondo}<span class="cnt-nm">${esc(cntCorto(pid))}${cmds.length ? `<small class="cnt-cmdnm">${cmds.map(n => esc(n.split(",")[0])).join(" · ")}</small>` : ""}</span>${cuerpo}<span class="cnt-chips">${chips}</span></div></div>`;
   }
   function cntPintar(){
     const el = $("cnt"); if (!el || !CNT) return;
@@ -4529,8 +4577,11 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const W = window.innerWidth, H = window.innerHeight, L = cntLayout(CNT.seats.length, W, H);
     const t = S && S.rounds[S.cur] && S.rounds[S.cur].tables[cntTi];
     const vivos = cntVivos(), gano = vivos.length === 1 && CNT.seats.length > 1 ? vivos[0] : null;
+    el.classList.toggle("asientos", CNT.ordenListo === false);
     el.innerHTML = `<div class="cnt-grid" style="grid-template-columns:repeat(${L.cols},1fr);grid-template-rows:repeat(${L.rows},1fr)">${CNT.seats.map((p, i) => cntPanel(p, i, L)).join("")}</div>
-      <button type="button" class="cnt-hub" data-cnt="menu" aria-label="Menú de la mesa"><b>${S ? fmt(remaining()) : "--:--"}</b><i>☰</i></button>
+      ${CNT.ordenListo === false
+        ? `<div class="cnt-setup" role="group" aria-label="Ubicar a los jugadores"><b>¿Dónde se sienta cada uno?</b><span>Toca dos jugadores para cambiarlos de lugar. Cada panel mira hacia su dueño.</span><button type="button" class="btn primary" data-cnt="orden-ok">✔ Listo, empezar</button>${pantallaCompletaOk() && !enPantallaCompleta() ? `<button type="button" class="btn ghost" data-cnt="completa">⛶ Pantalla completa</button>` : ""}</div>`
+        : `<button type="button" class="cnt-hub" data-cnt="menu" aria-label="Menú de la mesa"><b>${S ? fmt(remaining()) : "--:--"}</b><i>☰</i></button>`}
       ${gano ? `<div class="cnt-fin"><div><span>Mesa ${cntTi + 1}</span><b>¡Gana ${esc(pname(gano))}!</b><p>El resultado ya quedó reportado. El organizador lo revisa y cierra la mesa.</p><div class="cnt-opts"><button type="button" class="btn primary" data-cnt="salir">Listo</button><button type="button" class="btn ghost" data-cnt="revivir" data-p="${esc(CNT.ultimo || "")}">Deshacer la última eliminación</button></div></div></div>` : ""}
       ${t && t.result && !gano ? `<div class="cnt-aviso">El organizador ya cerró esta mesa: ${esc(resLabel(t.result, t.seats))}</div>` : ""}
       ${cntModal ? cntModalHTML() : ""}`;
@@ -4546,7 +4597,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
           cntAnim(bg, [{filter: a.f === "none" ? "brightness(1)" : a.f}, {filter: f === "none" ? "brightness(1)" : f}], {duration: modo === "fuera" ? 700 : 320});
           cntAnim(bg, [{opacity: a.o}, {opacity: o}], {duration: 320, pseudoElement: "::after"});
         }
-        [...inn.children].filter(c => !c.classList.contains("cnt-nm") && !c.classList.contains("cnt-chips")).forEach((c, k) =>
+        [...inn.children].filter(c => !c.classList.contains("cnt-nm") && !c.classList.contains("cnt-chips") && !c.classList.contains("cnt-bg")).forEach((c, k) =>
           cntAnim(c, [{opacity: 0, transform: modo === "fuera" ? "scale(1.25)" : "scale(.92)"}, {opacity: 1, transform: "none"}], {duration: modo === "fuera" ? 460 : 300, delay: k * 18, easing: modo === "fuera" ? REBOTE : EASE}));
         if (modo === "fuera") cntAnim(p, [{transform: "translateX(0)"}, {transform: "translateX(-1.5%)"}, {transform: "translateX(1.5%)"}, {transform: "translateX(0)"}], {duration: 260, delay: 40});
       }
@@ -4584,6 +4635,8 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         <div class="cnt-opts col">
           <button type="button" class="btn primary" data-cnt="cerrarmodal">Volver a la partida</button>
           <button type="button" class="btn ghost" data-cnt="tiempo">Se acabó el tiempo: terminar y reportar</button>
+          ${pantallaCompletaOk() ? `<button type="button" class="btn ghost" data-cnt="completa">${enPantallaCompleta() ? "Salir de pantalla completa" : "⛶ Pantalla completa (sin barra del navegador)"}</button>` : `<p class="msg">En iPhone el navegador no deja ocultar su barra: toca <b>Compartir → Agregar a inicio</b> y abre la liga desde ese ícono; así se ve a pantalla completa.</p>`}
+          <button type="button" class="btn ghost" data-cnt="asientos">Cambiar asientos</button>
           <button type="button" class="btn ghost" data-cnt="reiniciar">Reiniciar vidas (nueva partida)</button>
           <button type="button" class="btn ghost" data-cnt="salir">Salir del contador (queda guardado)</button>
         </div></div></div>`;
@@ -4674,6 +4727,15 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
       cntGuardar(); cntPintar(); cntReportar(); return;
     }
     if (a === "menu"){ cntModal = {tipo: "menu"}; return cntPintar(); }
+    if (a === "asiento"){
+      if (!CNT.selAsiento || CNT.selAsiento === p){ CNT.selAsiento = CNT.selAsiento === p ? null : p; return cntPintar(); }
+      const i = CNT.seats.indexOf(CNT.selAsiento), j = CNT.seats.indexOf(p);
+      if (i >= 0 && j >= 0){ [CNT.seats[i], CNT.seats[j]] = [CNT.seats[j], CNT.seats[i]]; }
+      CNT.selAsiento = null; cntGuardar(); cntVibrar(12); return cntPintar();
+    }
+    if (a === "orden-ok"){ CNT.ordenListo = true; CNT.selAsiento = null; cntGuardar(); cntPrev = {}; cntPintar(); document.querySelectorAll("#cnt .cnt-pnl").forEach((x, i) => cntAnim(x, [{opacity: .4, transform: "scale(.94)"}, {opacity: 1, transform: "none"}], {duration: 380, delay: i * 50})); return; }
+    if (a === "asientos"){ cntModal = null; CNT.ordenListo = false; CNT.selAsiento = null; cntVista = null; cntGuardar(); return cntPintar(); }
+    if (a === "completa"){ cntModal = null; alternarPantallaCompleta().then(() => setTimeout(cntPintar, 250)); return cntPintar(); }
     if (a === "cerrarmodal") return cntSinModal();
     if (a === "tiempo"){ cntModal = {tipo: "confirmar", titulo: "¿Terminar la partida?", texto: `Se reporta la mesa con ${cntVivos().length} ${cntVivos().length === 1 ? "jugador vivo" : "jugadores vivos"} y las kills anotadas. Si alguien tiene que sumar o quitar algo, se corrige después en “Reportar resultado de la mesa”.`, ok: "Terminar y reportar", si: "tiempo-si"}; return cntPintar(); }
     if (a === "tiempo-si"){ cntReportar(); cntCerrar(); setTimeout(() => cntModal = null, 250); return; }
@@ -4682,11 +4744,16 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     if (a === "salir"){ cntCerrar(); setTimeout(() => cntModal = null, 250); return; }
   }
   function cntEventos(el){
-    // tocar + / −: mantener presionado suma o resta seguido
-    let repT = 0, ini = null, swipe = false;
-    const parar = () => { clearTimeout(repT); repT = 0; };
+    // Varios jugadores tocan a la vez: cada dedo lleva su propio estado (mantener presionado, deslizar).
+    // Antes un solo temporizador compartido se perdía con dos dedos y la vida seguía subiendo/bajando sola.
+    const dedos = new Map();
+    let swipe = false;
+    const parar = id => { const d = dedos.get(id); if (d){ clearTimeout(d.t); dedos.delete(id); } };
+    const pararTodo = () => { dedos.forEach(d => clearTimeout(d.t)); dedos.clear(); };
     el.addEventListener("pointerdown", e => {
-      ini = {x: e.clientX, y: e.clientY, pnl: e.target.closest(".cnt-pnl")}; swipe = false;
+      parar(e.pointerId);
+      const d = {x: e.clientX, y: e.clientY, pnl: e.target.closest(".cnt-pnl"), t: 0, swipe: false, inicio: Date.now()};
+      dedos.set(e.pointerId, d); swipe = false;
       const z = e.target.closest('[data-cnt="v+"], [data-cnt="v-"]');
       const zz = e.target.closest(".z");
       if (zz){
@@ -4694,17 +4761,30 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
         if (zz.firstElementChild) cntAnim(zz.firstElementChild, [{transform: "scale(1.35)"}, {transform: "none"}], {duration: 260, easing: REBOTE});
         cntVibrar(6);
       }
-      if (z){ let paso = 170; const tick = () => { if (swipe) return parar(); cntAccion(z); z._hecho = true; paso = Math.max(55, paso * .86); repT = setTimeout(tick, paso); }; repT = setTimeout(tick, 420); }
-    });
-    el.addEventListener("pointermove", e => {
-      if (!ini || swipe) return;
-      if (Math.hypot(e.clientX - ini.x, e.clientY - ini.y) > 55 && ini.pnl){
-        swipe = true; parar();
-        const pid = ini.pnl.dataset.pnl;
-        if (!CNT.out[pid] && !(CNT.pend && CNT.pend.pid === pid)){ cntVista = cntVista === pid ? null : pid; cntPintar(); }
+      if (z){
+        try { z.setPointerCapture(e.pointerId); } catch(err){}
+        let paso = 170;
+        const tick = () => {
+          // se corta si el dedo ya no está, si el botón desapareció o si lleva demasiado rato (seguro contra toques "pegados")
+          if (!dedos.has(e.pointerId) || d.swipe || !z.isConnected || el.hidden || Date.now() - d.inicio > 12000) return parar(e.pointerId);
+          cntAccion(z); z._hecho = true; paso = Math.max(55, paso * .86); d.t = setTimeout(tick, paso);
+        };
+        d.t = setTimeout(tick, 420);
       }
     });
-    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => el.addEventListener(ev, () => { parar(); if (ev !== "pointerleave") ini = null; }));
+    el.addEventListener("pointermove", e => {
+      const d = dedos.get(e.pointerId); if (!d || d.swipe) return;
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 55 && d.pnl){
+        d.swipe = true; swipe = true; clearTimeout(d.t);
+        const pid = d.pnl.dataset.pnl;
+        if (CNT.ordenListo !== false && !CNT.out[pid] && !(CNT.pend && CNT.pend.pid === pid)){ cntVista = cntVista === pid ? null : pid; cntPintar(); }
+      }
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => el.addEventListener(ev, e => parar(e.pointerId)));
+    // red de seguridad: cualquier dedo que se levante en la ventana, cambio de app o pantalla bloqueada detiene todo
+    window.addEventListener("pointerup", e => parar(e.pointerId), true);
+    window.addEventListener("blur", pararTodo);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) pararTodo(); });
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-cnt]"); if (!b) return;
       if (swipe){ swipe = false; return; }
@@ -4732,6 +4812,46 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     });
   }
   const mesaFirma = {};
+  // ¿Estamos en la última ronda? Ahí el top 4 se guarda para la premiación (salvo que el organizador lo desactive)
+  function suspenso(){
+    if (!S || !S.rounds || !S.cfg || S.sinSuspenso) return false;
+    return S.rounds.length >= S.cfg.rounds && S.cur >= S.cfg.rounds - 1;
+  }
+  let revPrev = null;
+  function revelarAnim(stand, ocultas, publico){
+    const n = S && S.revelados || 0;
+    if (publico && revPrev !== null && n > revPrev && !quieto()){
+      const i = Math.min(4, stand.length) - n, fila = $("standBody").children[i];
+      if (fila && fila.animate){
+        fila.classList.add("revelado");
+        fila.animate([{opacity: 0, transform: "scale(1.15)", filter: "blur(6px)"}, {opacity: 1, transform: "none", filter: "blur(0)"}], {duration: 900, easing: "cubic-bezier(.2,.9,.3,1.2)"});
+        try { fila.scrollIntoView({block: "center", behavior: "smooth"}); } catch(e){}
+      }
+    }
+    revPrev = n;
+  }
+  function pintarPremiacion(stand, sus, ocultas){
+    const box = $("premiacion"); if (!box) return;
+    const ver = ADMUI() && !document.body.classList.contains("display") && S && S.rounds && S.rounds.length >= S.cfg.rounds;
+    box.hidden = !ver; if (!ver) return;
+    const n = S.revelados || 0, tope = Math.min(4, stand.length), sig = tope - n;
+    const lugar = i => ["1.er", "2.º", "3.er", "4.º"][i] + " lugar";
+    box.innerHTML = S.sinSuspenso
+      ? `<span><b>Premiación:</b> el standing completo se ve en la pantalla.</span><button type="button" class="btn ghost" data-prem="ocultar">Ocultar el top 4 para premiar</button>`
+      : `<span><b>Premiación:</b> ${n >= tope ? "top 4 revelado en la pantalla." : `en la pantalla el top ${tope} está oculto${n ? ` (revelados ${n} de ${tope})` : ""}. Tú sí lo ves aquí.`}</span>
+        ${n < tope ? `<button type="button" class="btn primary" data-prem="revelar">🏆 Revelar ${lugar(sig - 1)}${stand[sig - 1] ? ": " + esc(stand[sig - 1].name) : ""}</button>` : ""}
+        ${n ? `<button type="button" class="btn ghost" data-prem="atras">↶ Volver a ocultar uno</button>` : ""}
+        <button type="button" class="btn ghost" data-prem="mostrar">Mostrar todo sin premiación</button>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-prem]"); if (!b || !S || !ADMUI()) return;
+    const a = b.dataset.prem;
+    if (a === "revelar") S.revelados = Math.min(4, (S.revelados || 0) + 1);
+    else if (a === "atras") S.revelados = Math.max(0, (S.revelados || 0) - 1);
+    else if (a === "mostrar") S.sinSuspenso = true;
+    else if (a === "ocultar"){ S.sinSuspenso = false; S.revelados = 0; }
+    commit();
+  });
   function mesasDestello(){
     if (!S || quieto()) return;
     document.querySelectorAll("#tables .mesa[data-t]").forEach(el => {
