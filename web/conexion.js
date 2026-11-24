@@ -194,13 +194,13 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <div class="links"><button class="lnk" type="button" data-close>Cerrar</button><button class="lnk" type="button" data-logout>Cerrar sesión</button></div>
       ${APP ? "" : `<div class="acc-zona"><a class="lnk" href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a><button class="lnk peligro" type="button" data-go="eliminar">Eliminar mi cuenta</button></div>`}`}; },
     eliminar: () => ({eyebrow:"Mi cuenta", title:"Eliminar mi cuenta", body:`
-      <p class="hint">Se borra <b>todo</b> de inmediato y no se puede deshacer:</p>
+      <p class="hint">Se borra tu cuenta de inmediato y no se puede deshacer:</p>
       <ul class="acc-lista">
         <li>Tu cuenta: correo, contraseña, vínculo con Google y sesiones abiertas.</li>
         <li>Tu nombre, apellido, apodo y foto.</li>
-        <li>Tus inscripciones, tus reportes de mesa y tu vínculo con tu jugador.</li>
-        <li>Tu correo de la lista de los organizadores y tus registros de inicio de sesión.</li>
-        <li>En el historial, el salón de la fama y los sorteos tu nombre pasa a “Jugador eliminado”: los puntos quedan anónimos para no cambiar el standing de los demás.</li>
+        <li>Tu vínculo con tu jugador, tus inscripciones pendientes y tu correo de la lista de los organizadores.</li>
+        <li>Tus registros de inicio de sesión.</li>
+        <li><b>Se mantiene</b> el historial de la liga: las fechas que jugaste, tus resultados, reportes, puntos, salón de la fama y sorteos siguen tal cual.</li>
       </ul>
       <form id="fEliminar" novalidate>
         <div class="field"><label for="aBorrar">Para confirmar, escribe <b>ELIMINAR</b></label><input id="aBorrar" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
@@ -209,7 +209,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       </form>
       <div class="links"><button class="lnk" type="button" data-go="cuenta">No, volver a Mi perfil</button><a class="lnk" href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></div>`}),
     eliminada: () => ({eyebrow:"Listo", title:"Tu cuenta fue eliminada", body:`
-      <p class="hint">Borramos tu cuenta y tus datos personales. Si quieres volver a jugar, puedes crear una cuenta nueva cuando quieras.</p>
+      <p class="hint">Borramos tu cuenta. Tu historial en la liga se mantiene. Si quieres volver a jugar, puedes crear una cuenta nueva cuando quieras.</p>
       <button class="btn primary" type="button" data-recargar>Entendido</button>`, noClose:true}),
     newpass: () => ({eyebrow:"Recuperar contraseña", title:"Crea tu contraseña nueva", body:`
       <form id="fNew" novalidate>
