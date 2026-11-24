@@ -80,6 +80,11 @@
 .acc-foto-btns{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .acc-foto-btns .btn{width:auto;padding:8px 14px}
 .acc-pass summary{cursor:pointer;font-size:14px;color:var(--fg);padding:4px 0}
+.acc-zona{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.acc .lnk.peligro{color:#ff8a75}
+.acc .btn.peligro{background:linear-gradient(180deg,#b3261e,#8c1d17);border-color:#d0453b}
+.acc-lista{margin:0 0 12px;padding-left:18px;font-size:13px;line-height:1.5;color:var(--muted,#b3a5a1)}
+.acc-lista li{margin:3px 0}
 .acc-pass[open] summary{margin-bottom:8px}
 .acc-pass > *:not(summary){margin-top:10px}
 .acc .eye{position:relative}
@@ -186,7 +191,26 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
         <span class="err" id="aErr"></span><span class="ok" id="aOk"></span>
         <button class="btn primary" type="submit">Guardar cambios</button>
       </form>
-      <div class="links"><button class="lnk" type="button" data-close>Cerrar</button><button class="lnk" type="button" data-logout>Cerrar sesión</button></div>`}; },
+      <div class="links"><button class="lnk" type="button" data-close>Cerrar</button><button class="lnk" type="button" data-logout>Cerrar sesión</button></div>
+      ${APP ? "" : `<div class="acc-zona"><a class="lnk" href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a><button class="lnk peligro" type="button" data-go="eliminar">Eliminar mi cuenta</button></div>`}`}; },
+    eliminar: () => ({eyebrow:"Mi cuenta", title:"Eliminar mi cuenta", body:`
+      <p class="hint">Se borra <b>todo</b> de inmediato y no se puede deshacer:</p>
+      <ul class="acc-lista">
+        <li>Tu cuenta: correo, contraseña, vínculo con Google y sesiones abiertas.</li>
+        <li>Tu nombre, apellido, apodo y foto.</li>
+        <li>Tus inscripciones, tus reportes de mesa y tu vínculo con tu jugador.</li>
+        <li>Tu correo de la lista de los organizadores y tus registros de inicio de sesión.</li>
+        <li>En el historial, el salón de la fama y los sorteos tu nombre pasa a “Jugador eliminado”: los puntos quedan anónimos para no cambiar el standing de los demás.</li>
+      </ul>
+      <form id="fEliminar" novalidate>
+        <div class="field"><label for="aBorrar">Para confirmar, escribe <b>ELIMINAR</b></label><input id="aBorrar" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        <span class="err" id="aErr"></span>
+        <button class="btn primary peligro" type="submit">Eliminar mi cuenta para siempre</button>
+      </form>
+      <div class="links"><button class="lnk" type="button" data-go="cuenta">No, volver a Mi perfil</button><a class="lnk" href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></div>`}),
+    eliminada: () => ({eyebrow:"Listo", title:"Tu cuenta fue eliminada", body:`
+      <p class="hint">Borramos tu cuenta y tus datos personales. Si quieres volver a jugar, puedes crear una cuenta nueva cuando quieras.</p>
+      <button class="btn primary" type="button" data-recargar>Entendido</button>`, noClose:true}),
     newpass: () => ({eyebrow:"Recuperar contraseña", title:"Crea tu contraseña nueva", body:`
       <form id="fNew" novalidate>
         ${passField("aPass", "Contraseña nueva", "new-password")}
@@ -284,6 +308,17 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     e.preventDefault();
     const f = e.target; setErr("");
     if (!sb) return setErr("No se pudo conectar con el servidor.");
+    if (f.id === "fEliminar"){
+      if (clean($a("aBorrar").value).toUpperCase() !== "ELIMINAR") return setErr("Escribe ELIMINAR para confirmar.");
+      busy(f, true);
+      const {error} = await sb.rpc("eliminar_mi_cuenta");
+      if (error){ busy(f, false); return setErr(/organizador/i.test(error.message || "") ? error.message : "No se pudo eliminar la cuenta: " + friendly(error) + ". Intenta de nuevo o escríbenos."); }
+      // la cuenta ya no existe: se limpia todo lo guardado en este navegador
+      try { await sb.auth.signOut({scope: "local"}); } catch(e){}
+      try { Object.keys(localStorage).filter(k => /^(sb-|__mesa:|supabase)/.test(k) || /auth|perfil|vinculo/i.test(k)).forEach(k => localStorage.removeItem(k)); } catch(e){}
+      try { sessionStorage.clear(); } catch(e){}
+      show("eliminada"); return;
+    }
     if (f.id === "fApp"){
       const email = clean($a("aEmail").value).toLowerCase(), pass = $a("aPass").value;
       ctx.email = email;
@@ -447,6 +482,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     if (t.closest("[data-foto-del]")){ const v = {first:$a("aFirst").value, last:$a("aLast").value, nick:$a("aNick").value}; ctx.cta = Object.assign(ctx.cta || {}, v, {avatar:null}); show("cuenta"); const ok = $a("aOk"); if (ok) ok.textContent = "Foto quitada. Toca “Guardar cambios”."; return; }
     if (t === back && Auth.closable && !VIEWS[view]().noClose) return close();
     if (t.closest("[data-close]")) return close();
+    if (t.closest("[data-recargar]")){ location.href = location.pathname + location.search; return; }
     if (t.closest("[data-logout]")){ if (sb) await sb.auth.signOut(); location.reload(); return; }
     const gb = t.closest("[data-google]");
     if (gb){

@@ -138,6 +138,9 @@ button{cursor:pointer}
 /* Standing */
 .stand{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .stand-scroll{overflow-x:auto}
+.pie{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:28px 16px 36px;color:var(--muted);font-size:12px}
+.pie a{color:var(--muted)}
+body.display .pie{display:none}
 /* Premiación: top 4 oculto hasta que el organizador lo revela */
 tr.oculto td{color:var(--muted)}
 tr.oculto .incognita{font-family:var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);opacity:.85;animation:incognita 2.4s ease-in-out infinite}
@@ -1375,6 +1378,7 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     </div>
   </details>
 </div>
+<footer class="pie"><a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a><span>·</span><span>Liga Commander El Desafío · Cafetería El Desafío</span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>

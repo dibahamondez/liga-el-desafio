@@ -21,6 +21,19 @@ ul{padding-left:20px}
 a{color:var(--fg)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 20px 18px}
 .meta{color:var(--muted);font-size:13px}
+.tabla{overflow-x:auto;margin:6px 0}
+table.t{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+table.t th,table.t td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.t th{color:var(--gold);font-weight:700;white-space:nowrap}
+table.t td:first-child{font-weight:600;color:var(--fg)}
+@media (max-width:640px){
+  table.t{min-width:0}
+  table.t thead{display:none}
+  table.t tr{display:block;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0;background:rgba(255,255,255,.02)}
+  table.t td{display:block;border:0;padding:3px 0}
+  table.t td:first-child{font-size:15px;color:var(--gold);padding-bottom:6px}
+  table.t td:not(:first-child)::before{content:attr(data-l) ": ";display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+}
 </style>
 </head>
 <body>
@@ -31,32 +44,65 @@ a{color:var(--fg)}
   </header>
   <div class="card">
     <h2>Política de privacidad</h2>
-    <p class="meta">Última actualización: 15 de octubre de 2026</p>
-    <p>Esta página explica qué datos usa el sitio de la Liga Commander El Desafío (<a href="https://liga-eldesafio.netlify.app">liga-eldesafio.netlify.app</a>), organizada por Cafetería El Desafío, y para qué.</p>
+    <p class="meta">Última actualización: 24 de noviembre de 2026</p>
+    <p>Esta política explica <b>qué datos personales</b> recoge el sitio de la Liga Commander El Desafío (<a href="https://liga-eldesafio.netlify.app">liga-eldesafio.netlify.app</a>) y la aplicación del organizador, <b>para qué se usan</b>, <b>qué servicios los procesan</b> y <b>cómo borrar tu cuenta</b>. La liga la organiza Cafetería El Desafío.</p>
 
-    <h2>Qué datos guardamos</h2>
+    <h2>1. Qué datos recogemos y para qué</h2>
+    <div class="tabla"><table class="t">
+      <thead><tr><th>Dato</th><th>Cuándo se recoge</th><th>Para qué se usa</th><th>Quién lo ve</th></tr></thead>
+      <tbody>
+        <tr><td data-l="Dato">Correo electrónico</td><td data-l="Cuándo se recoge">Al crear tu cuenta (o el de Google si entras con Google)</td><td data-l="Para qué se usa">Iniciar sesión, enviarte el código de verificación o de cambio de contraseña y, si hace falta, contactarte por temas de la liga</td><td data-l="Quién lo ve">Solo tú y los organizadores. <b>Nunca se muestra en la página</b></td></tr>
+        <tr><td data-l="Dato">Contraseña</td><td data-l="Cuándo se recoge">Al crear tu cuenta con correo</td><td data-l="Para qué se usa">Iniciar sesión</td><td data-l="Quién lo ve">Nadie: Supabase la guarda cifrada (hash); ni los organizadores pueden verla</td></tr>
+        <tr><td data-l="Dato">Nombre y apellido</td><td data-l="Cuándo se recoge">Al crear tu cuenta</td><td data-l="Para qué se usa">Identificarte en la liga: inscripciones, mesas, standing, estadísticas y premios</td><td data-l="Quién lo ve">Público (página de la liga y pantalla del evento)</td></tr>
+        <tr><td data-l="Dato">Apodo y foto de perfil (opcionales)</td><td data-l="Cuándo se recoge">Si los agregas en “Mi perfil”</td><td data-l="Para qué se usa">Mostrarlos junto a tu nombre</td><td data-l="Quién lo ve">Público</td></tr>
+        <tr><td data-l="Dato">Datos de Google (si entras con Google)</td><td data-l="Cuándo se recoge">Al entrar con Google</td><td data-l="Para qué se usa">Solo tu nombre, tu correo y tu foto de Google para crear la cuenta. No accedemos a tus contactos, archivos ni a nada más de tu cuenta de Google</td><td data-l="Quién lo ve">Igual que los datos de arriba</td></tr>
+        <tr><td data-l="Dato">Inscripciones y mazo o comandante declarado</td><td data-l="Cuándo se recoge">Cuando te inscribes a una fecha</td><td data-l="Para qué se usa">Armar las mesas y mostrar con qué juegas</td><td data-l="Quién lo ve">Público</td></tr>
+        <tr><td data-l="Dato">Mesas, resultados, kills, reportes de mesa, puntos y estadísticas</td><td data-l="Cuándo se recoge">Durante cada fecha</td><td data-l="Para qué se usa">Llevar el standing, las estadísticas, el salón de la fama y los sorteos</td><td data-l="Quién lo ve">Público (el standing de la fecha en curso solo lo ven los organizadores hasta la premiación)</td></tr>
+        <tr><td data-l="Dato">Warnings o descuentos del juez</td><td data-l="Cuándo se recoge">Si el juez marca alguno</td><td data-l="Para qué se usa">Aplicarlos al standing</td><td data-l="Quién lo ve">Organizadores y juez; el descuento se refleja en los puntos</td></tr>
+        <tr><td data-l="Dato">Contador de vidas de tu mesa</td><td data-l="Cuándo se recoge">Si usas “Iniciar mesa”</td><td data-l="Para qué se usa">Llevar las vidas y enviar el reporte de la mesa</td><td data-l="Quién lo ve">Se guarda solo en tu celular; lo que se envía es el reporte (quién ganó y quién eliminó a quién)</td></tr>
+        <tr><td data-l="Dato">Datos técnicos</td><td data-l="Cuándo se recoge">Al usar el sitio</td><td data-l="Para qué se usa">Mantener tu sesión iniciada y la seguridad del servicio</td><td data-l="Quién lo ve">Ver punto 3</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>No usamos</b> cookies de publicidad ni herramientas de analítica o seguimiento. <b>No vendemos</b> ni arrendamos tus datos, y no los usamos para publicidad.</p>
+
+    <h2>2. Servicios que procesan esta información</h2>
     <ul>
-      <li><b>Tu cuenta:</b> nombre, apellido, apodo (opcional) y correo electrónico.</li>
-      <li><b>Si entras con Google:</b> solo tu nombre y tu correo de Google. No accedemos a tus contactos, archivos ni a ningún otro dato de tu cuenta de Google.</li>
-      <li><b>Datos de la liga:</b> tus inscripciones, el mazo o comandante que declaras, las mesas en que juegas, tus resultados, puntos y estadísticas.</li>
+      <li><b>Supabase</b> (supabase.com): base de datos e inicio de sesión. Guarda tu cuenta, tu perfil y todos los datos de la liga. También registra los inicios de sesión (fecha, dirección IP y navegador) por seguridad.</li>
+      <li><b>Netlify</b> (netlify.com): aloja la página. Como todo servidor web, recibe tu dirección IP y tu navegador al visitarla.</li>
+      <li><b>Google</b> (google.com): solo si eliges “Entrar con Google”, procesa tu inicio de sesión según su propia política. La página también carga sus tipografías desde Google Fonts, que recibe tu dirección IP.</li>
+      <li><b>jsDelivr</b> (jsdelivr.com): entrega una biblioteca técnica que usa la página para conectarse a Supabase; recibe tu dirección IP.</li>
+      <li><b>Scryfall</b> (scryfall.com): de ahí se cargan las ilustraciones de las cartas de los comandantes. Recibe el nombre de la carta y tu dirección IP, pero no tu nombre ni tu cuenta.</li>
+      <li><b>WhatsApp</b> (Meta): el organizador puede publicar en el grupo de WhatsApp de la liga las mesas, el standing y los resultados, con los nombres de los jugadores. Solo se envía lo que el organizador decide mandar.</li>
     </ul>
+    <p>Ninguno de estos servicios recibe tu contraseña. Cada uno trata los datos según su propia política de privacidad.</p>
 
-    <h2>Para qué los usamos</h2>
+    <h2>3. En tu dispositivo</h2>
+    <p>La página guarda en tu navegador (almacenamiento local) tu sesión iniciada, algunas preferencias y el estado del contador de vidas, para que no se pierdan al recargar. Puedes borrarlos cerrando sesión o borrando los datos del sitio en tu navegador.</p>
+
+    <h2>4. Cuánto tiempo se guardan</h2>
+    <p>Tus datos se guardan mientras tengas tu cuenta. Los resultados de las fechas jugadas forman parte del historial de la liga, porque de ellos dependen el standing y las estadísticas de los demás jugadores.</p>
+
+    <h2>5. Eliminar tu cuenta</h2>
+    <p>En <b>Mi perfil → Eliminar mi cuenta</b> puedes borrar tu cuenta tú mismo, en cualquier momento. Al confirmar se elimina <b>de inmediato y sin vuelta atrás</b>:</p>
     <ul>
-      <li>Gestionar las inscripciones, armar las mesas y llevar el standing y las estadísticas de la liga.</li>
-      <li>Mostrar tu nombre, mazo y resultados en las mesas, el standing y las estadísticas de la liga, que son públicos.</li>
-      <li>Contactarte por temas de la liga si es necesario.</li>
+      <li>tu cuenta de inicio de sesión (correo, contraseña, vínculo con Google y sesiones abiertas);</li>
+      <li>tu nombre, apellido, apodo y foto de perfil;</li>
+      <li>tu correo de la lista de contactos de los organizadores;</li>
+      <li>tus inscripciones, tu vínculo con tu jugador de la liga y tus reportes de mesa;</li>
+      <li>tus registros de inicio de sesión;</li>
+      <li>tu nombre en el historial de fechas, la fecha en curso, el salón de la fama y los sorteos: se reemplaza por “Jugador eliminado”. Los puntos de esas partidas quedan <b>anónimos</b>, sin ningún dato que te identifique, para no alterar el standing ni las estadísticas de los demás.</li>
     </ul>
-    <p>Tu correo <b>no se muestra a otros jugadores</b>: solo lo ven los organizadores. No vendemos ni compartimos tus datos con terceros, ni los usamos para publicidad.</p>
+    <p>Lo que ya se haya enviado antes al grupo de WhatsApp queda en ese chat y no se puede borrar desde aquí. Las cuentas de organizador se eliminan escribiéndonos.</p>
 
-    <h2>Dónde se guardan</h2>
-    <p>Los datos se guardan en Supabase, el servicio de base de datos e inicio de sesión que usa el sitio. El inicio de sesión con Google lo procesa Google según su propia política de privacidad.</p>
+    <h2>6. Tus derechos</h2>
+    <p>Puedes pedir en cualquier momento <b>ver, corregir, borrar u oponerte</b> al uso de tus datos, o recibir una copia de ellos. Corregir tu nombre, apodo, foto o correo lo puedes hacer tú en “Mi perfil”; para lo demás escríbenos a <a href="mailto:dbahamondez00@gmail.com">dbahamondez00@gmail.com</a> o habla con los organizadores en la cafetería. Respondemos a la brevedad.</p>
+    <p>Si tienes menos de 14 años, necesitas la autorización de tu madre, padre o tutor para crear una cuenta.</p>
 
-    <h2>Tus derechos</h2>
-    <p>Puedes pedir ver, corregir o borrar tu cuenta y tus datos en cualquier momento, escribiendo a <a href="mailto:dbahamondez00@gmail.com">dbahamondez00@gmail.com</a> o hablando con los organizadores en la cafetería. Los resultados de fechas ya jugadas pueden quedar en el historial de la liga sin tu correo.</p>
+    <h2>7. Cambios a esta política</h2>
+    <p>Si cambiamos esta política, actualizaremos la fecha de arriba y lo avisaremos en la página o en el grupo de la liga.</p>
 
     <h2>Contacto</h2>
-    <p>Cafetería El Desafío · <a href="mailto:dbahamondez00@gmail.com">dbahamondez00@gmail.com</a></p>
+    <p>Cafetería El Desafío · Liga Commander El Desafío · <a href="mailto:dbahamondez00@gmail.com">dbahamondez00@gmail.com</a></p>
   </div>
   <p class="meta" style="margin-top:18px"><a href="jugador.html">← Volver al portal de jugadores</a></p>
 </div>
