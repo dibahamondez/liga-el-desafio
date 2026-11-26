@@ -754,7 +754,8 @@ async function alListo() {
 // Arranque con reintentos: a veces WhatsApp Web se recarga justo mientras el bot se conecta
 // ("Execution context was destroyed"). En vez de caerse, el bot espera unos segundos y vuelve a intentar;
 // desde el 2.º intento borra la copia guardada de WhatsApp Web (.wwebjs_cache) para que baje la versión nueva.
-const ERR_ARRANQUE = /Execution context was destroyed|Target closed|Session closed|detached Frame|Navigating frame was detached|Protocol error|net::ERR_/i;
+// Errores de arranque que se arreglan reintentando: WhatsApp Web todavía cargando (p. ej. "reading 'Socket'"), recargas, red
+const ERR_ARRANQUE = /Execution context was destroyed|Target closed|Session closed|detached Frame|Navigating frame was detached|Protocol error|net::ERR_|reading 'Socket'|Cannot read properties of (null|undefined)|auth timeout/i;
 async function iniciarCliente(numero, intento = 1) {
   crearCliente(numero);
   try { await client.initialize(); }
