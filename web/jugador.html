@@ -1776,10 +1776,9 @@ body.display .buch,body.display .mesa.bucket,body.display #moveHint{display:none
     const d = DECK[k], typed = (query || "").trim(), conPartner = hasPartner(input.id.replace(/Cmd2?$/, ""));
     resolveCIs(d.legs.concat(d.cmd)).then(got => { if (got && comboState && comboState.input === input) comboOpen(input, true); });
     const visibles = d.legs.filter(l => (!typed || hit(l)) && cmdElegible(k, l, conPartner) !== false);
-    const fuera = d.legs.filter(l => cmdElegible(k, l, conPartner) === false).length;
     const opts = visibles.map(l => ({value:l, main:l, sub: l === d.cmd ? "Comandante de portada" : cmdElegible(k, l, conPartner) == null ? "Comprobando identidad de color…" : "Legendaria del mazo · misma identidad de color", ci:ciFor(l)}));
-    if (typed && !d.legs.some(l => fold(l) === fold(typed))) opts.push({value:typed, main:`Usar “${typed}”`, sub:"Escribir otra carta a mano (se revisa su identidad de color)"});
-    if (fuera && !typed) opts.push({value:"", main:`${fuera} ${fuera === 1 ? "legendaria del mazo no aparece" : "legendarias del mazo no aparecen"}`, sub:`Su identidad de color no es la del mazo (${ciNombre(deckCIEf(k))}): según las reglas de Commander no pueden ser comandante`, disabled:true});
+    // las que no tienen la identidad de color del mazo no se muestran (tampoco si se escriben a mano)
+    if (typed && !d.legs.some(l => fold(l) === fold(typed)) && cmdElegible(k, typed, conPartner) !== false) opts.push({value:typed, main:`Usar “${typed}”`, sub:"Escribir otra carta a mano"});
     return opts;
   }
   let comboState = null; // {input, opts, idx}
