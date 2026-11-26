@@ -9,6 +9,6 @@ assert "const PORTAL = true;" in portal
 portal = portal.replace('<a class="btn ghost" id="lnkOther" href="./">Ver la liga</a>', '<a class="btn ghost" id="lnkOther" href="./" hidden>Ver la liga</a>', 1)
 for nombre in ("index.html", "jugador.html"):   # jugador.html se mantiene para los links y QR que ya circulan
     open(os.path.join(OUT, nombre), "w", encoding="utf8").write(portal)
-for f in ("privacidad.html", "config.js", "conexion.js", "logo.png", "logo-256.png", "favicon.png", "apple-touch-icon.png", "manifest.webmanifest"):
+for f in ("privacidad.html", "config.js", "conexion.js", "logo.png", "logo-256.png", "favicon.png", "apple-touch-icon.png", "manifest.webmanifest", "mazos-extra.json"):
     shutil.copy(os.path.join(SRC, f), OUT)
 print("Netlify listo en", OUT)
