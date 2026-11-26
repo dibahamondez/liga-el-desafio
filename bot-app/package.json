@@ -56,7 +56,8 @@
       "installerLanguages": [
         "es_ES"
       ],
-      "language": "3082"
+      "language": "3082",
+      "include": "build/instalador.nsh"
     },
     "publish": null
   },
