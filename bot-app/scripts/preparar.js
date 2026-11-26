@@ -14,4 +14,10 @@ for (const f of ["index.html", "conexion.js", "config.js", "logo.png", "logo-256
        .replace('const other = $("lnkOther"); if (other) other.href = other.getAttribute("href").split("?")[0] + "?liga=" + LIGA + (TEST ? "&test=1" : "");', 'const other = $("lnkOther"); if (other) other.href = "https://liga-eldesafio.netlify.app/?liga=" + LIGA + (TEST ? "&test=1" : "");');
   fs.writeFileSync(f, h); }
 try { execFileSync(process.execPath, [path.join(DEST, "bot.js"), "--solo-parche"], { stdio: "inherit", env: Object.assign({}, process.env, { BOT_DATOS: DEST }) }); } catch (e) { console.log("Aviso: no se pudo aplicar el parche ahora (se aplica al abrir la app)."); }
+// whatsapp-web.js 1.34.8 + arreglo "Socket" (upstream 38eb45b, aún no publicado en npm): WhatsApp Web ya no carga
+// WAWebSocketModel en la pantalla de QR y la librería se caía con "Cannot read properties of null (reading 'Socket')".
+{ const pk = path.join(__dirname, "..", "node_modules", "whatsapp-web.js", "package.json");
+  if (JSON.parse(fs.readFileSync(pk, "utf8")).version === "1.34.8") {
+    fs.copyFileSync(path.join(__dirname, "..", "parches", "wwebjs-1.34.8-Client.js"), path.join(path.dirname(pk), "src", "Client.js"));
+    console.log("Arreglo Socket de whatsapp-web.js aplicado."); } }
 console.log("Bot copiado en la app.");
